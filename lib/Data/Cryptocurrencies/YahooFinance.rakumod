@@ -53,13 +53,18 @@ sub make-id(Str $ccSymbol, Str $currency) {
     return $ccSymbol ~ '_' ~ $currency;
 }
 
+sub is-dates-vector($x) {
+    $x ~~ Positional && ([&&] $x.map({ $_ ~~ DateTime || $_ ~~ Numeric }))
+}
+
 #------------------------------------------------------------
 
 our sub CryptocurrencyData(Str $ccSymbol,
                            :dates(:$date-spec) is copy = Whatever,
                            :props(:$properties) is copy = Whatever,
                            :$currency = 'USD',
-                           :$format = 'hash'
+                           :$format = 'hash',
+                           Bool :$cache-all = True
                            ) {
     # Process ccSymbol
     die "The first argument is expected to be one of { @cryptoCurrencies.join(', ') }."
@@ -80,10 +85,10 @@ our sub CryptocurrencyData(Str $ccSymbol,
     # Process date spec
     my @dates =
             do given $date-spec {
-                when Whatever { [$ledgerStart, now.Int] }
-                when $_ ~~ Positional && $_.all ~~ DateTime && $_.elems ≥ 2 { $_[^2] }
-                when $_ ~~ Positional && $_.all ~~ DateTime { [$_[0], $_[0]] }
+                when is-dates-vector($_) && $_.elems ≥ 2 { $_[^2] }
+                when is-dates-vector($_) { [$_[0], $_[0]] }
                 when $_ ~~ DateTime { [$ledgerStart, $_] }
+                default { [$ledgerStart, now.Int] }
             };
 
     # Get currency symbol
@@ -100,7 +105,7 @@ our sub CryptocurrencyData(Str $ccSymbol,
         my $url = YahooFinanceURL(cryptoCurrencySymbol => $ccSymbol, endDate => now.Int);
 
         my %cryptoCurrenciesData =
-                do for @cryptoCurrencies -> $cc {
+                do for ($cache-all ?? @cryptoCurrencies !! [$ccSymbol,]) -> $cc {
                     # Read
                     my $res = LWP::Simple.get(YahooFinanceURL(cryptoCurrencySymbol => $cc, endDate => now.Int));
 
@@ -126,7 +131,6 @@ our sub CryptocurrencyData(Str $ccSymbol,
         @dsRes = |%allData{make-id($ccSymbol, $currency)}
     };
 
-
     # Filter to specs
     @dsRes = @dsRes.grep({ @dates[0].Numeric ≤ $_<DateTime>.Numeric ≤ @dates[1].Numeric });
     if !($properties ~~ Str && $properties.lc eq 'all') {
@@ -135,16 +139,19 @@ our sub CryptocurrencyData(Str $ccSymbol,
 
     # Result
     return do given $format {
+
         when $_.isa(Whatever) || $_ ~~ Str && $_.lc ∈ <hash timeseries> {
+
             my $tsVal = (@props (-) <Date DateTime>).keys.head;
-            my %h = @dsRes.map({ $_<DateTime> => $_{$tsVal} });
-            %h
+            my %h = @dsRes.map({ $_<DateTime> => $_{$tsVal} }).Hash;
+
+            $_.lc eq 'hash' ?? %h !! %h.pairs.sort({ $_.key }).Array;
         }
-        when $_ ~~ Str && $_.lc ∈ <dataset dataframe> {
-            @dsRes
-        }
+
+        when $_ ~~ Str && $_.lc ∈ <dataset dataframe> { @dsRes }
+
         default {
-            warn "The argument \$format is expected to be 'hash', 'dataset', or Whatever.";
+            warn "The argument \$format is expected to be 'hash', 'timeseroes', 'dataset', or Whatever.";
             @dsRes
         }
     }
