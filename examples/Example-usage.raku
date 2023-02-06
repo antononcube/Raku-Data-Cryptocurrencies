@@ -11,11 +11,11 @@ use Text::Plot;
 
 my $tstart = now;
 
-my @dsRes = cryptocurrency-data('BTC', props => 'all', format => 'dataset');
+my @dsRes = cryptocurrency-data('BTC', props => 'all', format => 'dataset'):!cache-all;
 
 my $tend = now;
 
-say "First time ingestion time: {$tend - $tstart}";
+say "First time ingestion time: { $tend - $tstart }";
 
 
 records-summary(@dsRes);
@@ -26,12 +26,15 @@ records-summary(@dsRes);
 
 $tstart = now;
 
-my %ts = cryptocurrency-data('BTC', props => <DateTime Close>, format => 'hash');
+my %ts = cryptocurrency-data('BTC', props => <DateTime Close>, dates => (DateTime.new(2020, 1, 1, 0, 0, 0), now),
+        format => 'hash');
 
 $tend = now;
-say "Second time ingestion time: {$tend - $tstart}";
+say "Second time ingestion time: { $tend - $tstart }";
 
 say %ts.elems;
 say %ts.tail(12).raku;
+
+records-summary(%ts.pairs.map({ %(Key => $_.key, Value => $_.value) }), field-names => <Key Value>);
 
 say text-list-plot(%ts.keys>>.DateTime>>.Numeric, %ts.values.Array, width => 160, height => 20);
