@@ -1,0 +1,23 @@
+use v6.d;
+
+use lib '.';
+use lib './lib';
+
+use Data::Cryptocurrencies;
+use Test;
+
+plan 4;
+
+## 1
+ok cryptocurrency-data('BTC', props => 'all', format => 'dataset'):!cache-all;
+
+## 2
+ok cryptocurrency-data('BTC', props => 'all', dates => (DateTime.new(2020,1,1,0,0,0), now), format => 'dataset');
+
+## 3
+ok cryptocurrency-data('BTC', props => <DataTime Close>, format => 'hash');
+
+## 4
+dies-ok { cryptocurrency-data('Blah**D&*') };
+
+done-testing;
