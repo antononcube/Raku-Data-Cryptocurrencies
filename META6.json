@@ -1,0 +1,36 @@
+{
+  "name": "Data::Cryptocurrencies",
+  "description": "Cryptocurrency data retrieval.",
+  "version": "0.1.0",
+  "perl": "6.d",
+  "authors": [
+    "Anton Antonov"
+  ],
+  "auth": "zef:antononcube",
+  "depends": [
+    "LWP::Simple:ver<0.109+>",
+    "Hash::Merge:ver<2.0.0+>:api<2+>",
+    "DateTime::Grammar:ver<0.1.0+>",
+    "Data::ExampleDatasets:ver<0.2.3>",
+    "Data::Reshapers:ver<0.3.0>"
+  ],
+  "build-depends": [],
+  "test-depends": [],
+  "provides": {
+    "Data::Cryptocurrencies": "lib/Data/Cryptocurrencies.rakumod",
+    "Data::Cryptocurrencies::YahooFinance": "lib/Data/Cryptocurrencies/YahooFinance.rakumod"
+  },
+  "resources": [
+  ],
+  "license": "Artistic-2.0",
+  "tags": [
+    "data",
+    "cli",
+    "crypto",
+    "cryptocurrency",
+    "cryptocurrencies",
+    "ingestion"
+  ],
+  "api": "1",
+  "source-url": "https://github.com/antononcube/Raku-Data-Cryptocurrencies.git"
+}
