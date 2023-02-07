@@ -65,7 +65,6 @@ our sub XDGDataFileName(Date $date) {
 
 our sub DumpCachedData(Date $date) {
     my $fname = XDGDataFileName($date);
-    #my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant.Numeric; $_ }).Array });
     my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant.Int; $_ }).Array });
     note %dumpData.first.head(2);
     spurt $fname, to-json(%dumpData);
@@ -78,7 +77,6 @@ our sub GetCachedData(Date $date -->Bool) {
         my $content = slurp $fname;
         my %newData = from-json($content);
         %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = DateTime.new($_<DateTime>); $_ }).Array });
-        #%newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = datetime-interpret($_<Date>); $_ }).Array });
         %allData = merge-hash(%allData, %newData);
         return True;
     }
