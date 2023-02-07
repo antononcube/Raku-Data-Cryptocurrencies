@@ -3,8 +3,10 @@ use v6.d;
 use Data::ExampleDatasets;
 use Data::Reshapers;
 use DateTime::Grammar;
+use JSON::Fast;
 use Hash::Merge;
 use LWP::Simple;
+use XDG::BaseDirectory :terms;
 
 unit module Data::Cryptocurrencies::YahooFinance;
 
@@ -40,6 +42,50 @@ our sub YahooFinanceKnownCurrencies() {
 
 my %allData;
 
+our sub AllCachedData() {
+    return %allData;
+}
+
+our sub XDGDataDirectoryName() {
+    my $dirName = data-home.Str ~ '/raku/Data/Cryptocurrencies';
+
+    if not $dirName.IO.e {
+        my $path = IO::Path.new($dirName);
+        if not mkdir($path) {
+            die "Cannot create the directory: $dirName."
+        }
+    }
+
+    return $dirName;
+}
+
+our sub XDGDataFileName(Date $date) {
+    return XDGDataDirectoryName() ~ '/' ~ 'YahooFinance-' ~ $date.Str ~ '.json';
+}
+
+our sub DumpCachedData(Date $date) {
+    my $fname = XDGDataFileName($date);
+    #my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant.Numeric; $_ }).Array });
+    my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant.Int; $_ }).Array });
+    note %dumpData.first.head(2);
+    spurt $fname, to-json(%dumpData);
+}
+
+our sub GetCachedData(Date $date -->Bool) {
+
+    my $fname = XDGDataFileName($date);
+    if $fname.IO.e {
+        my $content = slurp $fname;
+        my %newData = from-json($content);
+        %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = DateTime.new($_<DateTime>); $_ }).Array });
+        #%newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = datetime-interpret($_<Date>); $_ }).Array });
+        %allData = merge-hash(%allData, %newData);
+        return True;
+    }
+    return False;
+}
+
+
 #------------------------------------------------------------
 
 sub YahooFinanceURL(:$cryptoCurrencySymbol = 'BTC',
@@ -58,14 +104,21 @@ sub is-dates-vector($x) {
 }
 
 #------------------------------------------------------------
+#| Cryptocurrencies data retrieval from Yahoo Finance.
+our proto CryptocurrencyData(|) is export {*}
 
-our sub CryptocurrencyData(Str $ccSymbol,
-                           :dates(:$date-spec) is copy = Whatever,
-                           :props(:$properties) is copy = Whatever,
-                           :$currency = 'USD',
-                           :$format = 'hash',
-                           Bool :$cache-all = True
-                           ) {
+multi sub CryptocurrencyData(@ccSymbols, *%args) {
+    return @ccSymbols.map({ $_ => CryptocurrencyData($_, |%args) }).Hash;
+}
+
+multi sub CryptocurrencyData(Str $ccSymbol,
+                             :dates(:$date-spec) is copy = Whatever,
+                             :props(:$properties) is copy = Whatever,
+                             :$currency = 'USD',
+                             :$format = 'hash',
+                             Bool :$cache-all = False,
+                             Bool :$keep = True
+                             ) {
     # Process ccSymbol
     die "The first argument is expected to be one of { @cryptoCurrencies.join(', ') }."
     unless $ccSymbol ∈ @cryptoCurrencies;
@@ -95,15 +148,18 @@ our sub CryptocurrencyData(Str $ccSymbol,
     die "The argument \$currency is expected to be one of { @currencies.join(', ') }."
     unless $currency ∈ @currencies;
 
+    # Pre-load cached data
+    if AllCachedData().elems == 0 && XDGDataFileName(now.DateTime.Date).IO.e {
+        my $dumpGetRes = GetCachedData(now.DateTime.Date);
+    }
+
     # Get data
     my @dsRes;
-    do if %allData{make-id($ccSymbol, $currency)}:exists {
+    if %allData{make-id($ccSymbol, $currency)}:exists {
         @dsRes = |%allData{make-id($ccSymbol, $currency)}
     } else {
 
         # Retrieve all time series data
-        my $url = YahooFinanceURL(cryptoCurrencySymbol => $ccSymbol, endDate => now.Int);
-
         my %cryptoCurrenciesData =
                 do for ($cache-all ?? @cryptoCurrencies !! [$ccSymbol,]) -> $cc {
                     # Read
@@ -123,6 +179,11 @@ our sub CryptocurrencyData(Str $ccSymbol,
                     # Result pair
                     $id => @ds;
                 };
+
+        # Dump downloaded data
+        if $cache-all && $keep {
+            DumpCachedData(now.DateTime.Date);
+        }
 
         # Add to data storage
         %allData = merge-hash(%allData, %cryptoCurrenciesData);
