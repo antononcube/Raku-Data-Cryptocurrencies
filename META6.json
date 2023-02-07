@@ -8,11 +8,13 @@
   ],
   "auth": "zef:antononcube",
   "depends": [
-    "LWP::Simple:ver<0.109+>",
-    "Hash::Merge:ver<2.0.0+>:api<2+>",
-    "DateTime::Grammar:ver<0.1.0+>",
     "Data::ExampleDatasets:ver<0.2.3>",
-    "Data::Reshapers:ver<0.3.0>"
+    "Data::Reshapers:ver<0.3.0>",
+    "DateTime::Grammar:ver<0.1.0+>",
+    "JSON::Fast:ver<0.17>+",
+    "Hash::Merge:ver<2.0.0+>:api<2+>",
+    "LWP::Simple:ver<0.109+>",
+    "XDG::BaseDirectory:ver<0.0.13+>:auth<zef:jonathanstowe>:api<1.0+>"
   ],
   "build-depends": [],
   "test-depends": [],
@@ -29,7 +31,9 @@
     "crypto",
     "cryptocurrency",
     "cryptocurrencies",
-    "ingestion"
+    "ingestion",
+    "yahoo",
+    "finance"
   ],
   "api": "1",
   "source-url": "https://github.com/antononcube/Raku-Data-Cryptocurrencies.git"
