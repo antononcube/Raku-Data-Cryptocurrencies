@@ -1,0 +1,39 @@
+#!/usr/bin/env raku
+use v6.d;
+
+use Data::Cryptocurrencies;
+use JSON::Fast;
+use DateTime::Grammar;
+
+#| Retrieves cryptocurrency data.
+sub MAIN(
+        Str $symbol = 'BTC',          #= Cryptocurrency symbol.
+        Str :p(:$properties) = 'all', #= Properties to retrieve.
+        Str :$start-date = 'auto',    #= Start date.
+        Str :$end-date = 'now',       #= End date.
+        Str :c(:$currency) = 'USD',   #= Currency.
+        Str :$format = 'json',        #= Format of the result
+         ) {
+
+    my $endDateSpec = do given $end-date.lc {
+        when $_ ∈ <now today> { now.Int }
+        when $_ ∈ <auto whatever> { now.Int }
+        default { datetime-interpret($_) }
+    }
+
+    my $startDateSpec = do given $start-date.lc {
+        when $_ ∈ <now today> { Date.today.Int }
+        when $_ ∈ <auto whatever> { $endDateSpec - 24 * 3600 }
+        default { datetime-interpret($_) }
+    };
+
+    my @dateSpec = ($startDateSpec, $endDateSpec);
+
+    my @ds = cryptocurrency-data($symbol, props => $properties, dates => @dateSpec, :$currency, format => 'dataset');
+
+    if $format.lc eq 'json' {
+        say to-json(@ds);
+    } else {
+        say @ds;
+    }
+}
