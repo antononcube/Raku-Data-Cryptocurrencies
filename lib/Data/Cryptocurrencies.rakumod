@@ -7,14 +7,14 @@ unit module Data::Cryptocurrencies;
 #| Cryptocurrency data retrieval.
 proto cryptocurrency-data(|) is export {*}
 
-multi sub cryptocurrency-data(Str $spec where $spec.lc ∈ <currency cryptocurrency crypto-currency>) {
+multi sub cryptocurrency-data(Str $spec where $spec.lc ∈ <currency currencies cryptocurrency cryptocurrencies crypto-currency crypto-currencies>) {
     if $spec eq 'currency' {
-        return Data::Cryptocurrencies::YahooFinance::KnownCurrencoes;
+        return Data::Cryptocurrencies::YahooFinance::KnownCurrencies;
     } else {
         return Data::Cryptocurrencies::YahooFinance::KnownCryptoCurrency;
     }
 }
 
-multi sub cryptocurrency-data(*@args, *%args) {
-    return Data::Cryptocurrencies::YahooFinance::CryptocurrencyData(|@args, |%args);
+multi sub cryptocurrency-data($spec, *%args) {
+    return Data::Cryptocurrencies::YahooFinance::CryptocurrencyData($spec, |%args);
 }
