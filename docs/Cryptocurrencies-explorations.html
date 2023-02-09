@@ -1,0 +1,825 @@
+<h1>
+Cryptocurrencies explorations
+</h1>
+
+<h2>
+Introduction
+</h2>
+
+<p>
+The main goal of this computational Markdown document is to provide some basic views and insights into the landscape of cryptocurrencies.
+The “landscape” we consider consists of price action and trading volume time series for cryptocurrencies found in Yahoo Finance.
+</p>
+
+<p>
+In this document we compute and plot with Raku the statistics in [AA1].
+</p>
+
+<h3>
+Details on "running" the document
+</h3>
+
+<p>
+The Raku package used for data retrieval is "Data::Cryptocurrencies", [AAp1].
+The JavaScript D3 plots are made via "JavaScript::D3", [AAp2].
+</p>
+
+<p>
+This Markdown document is converted to its woven Markdown version with "Text::CodeProcessing", [AAp3].
+The woven Markdown document is converted to an HTML document with "Markdown::Grammar", [AAp4].
+</p>
+
+<p>
+Here is the corresponding shell command:
+</p>
+
+<pre><code>
+file-code-chunks-eval Cryptocurrencies-explorations.md && 
+  from-markdown Cryptocurrencies-explorations_woven.md -t html -o Cryptocurrencies-explorations.html && 
+  open Cryptocurrencies-explorations.html
+</code></pre>
+
+
+<p><hr></p>
+
+<h2>
+Setup
+</h2>
+
+<p>
+Here we load the packages used below:
+</p>
+
+<pre><code class="perl6">
+use Data::Cryptocurrencies;
+use Data::Reshapers;
+use Data::Summarizers;
+use Text::Plot;
+use JavaScript::D3;
+</code></pre>
+
+<pre><code>
+# (Any)
+</code></pre>
+
+
+<p><hr></p>
+
+<h2>
+Time series
+</h2>
+
+<p>
+Here we get Bitcoin (BTC) data from 1/1/2020 until now:
+</p>
+
+<pre><code class="perl6">
+my %ccTS = cryptocurrency-data(<BTC ETH>, dates => (DateTime.new(2020,1,1,0,0,0), now), props => <DateTime Close>, format => 'hash');
+
+say %ccTS.elems;
+</code></pre>
+
+<pre><code>
+# 2
+</code></pre>
+
+
+<p>
+Here is a summary:
+</p>
+
+<pre><code class="perl6">
+records-summary(%ccTS);
+</code></pre>
+
+<pre><code>
+# summary of BTC =>
+# +--------------------------------+---------------------------+
+# | DateTime                       | Close                     |
+# +--------------------------------+---------------------------+
+# | Min    => 2020-01-01T00:00:37Z | Min    => 4970.788086     |
+# | 1st-Qu => 2020-10-10T12:00:37Z | 1st-Qu => 11777.1845705   |
+# | Mean   => 2021-07-21T12:00:37Z | Mean   => 28619.277387658 |
+# | Median => 2021-07-21T12:00:37Z | Median => 23138.6220705   |
+# | 3rd-Qu => 2022-05-01T12:00:37Z | 3rd-Qu => 42432.1113285   |
+# | Max    => 2023-02-09T00:00:37Z | Max    => 67566.828125    |
+# +--------------------------------+---------------------------+
+# summary of ETH =>
+# +----------------------------+--------------------------------+
+# | Close                      | DateTime                       |
+# +----------------------------+--------------------------------+
+# | Min    => 110.605873       | Min    => 2020-01-01T00:00:37Z |
+# | 1st-Qu => 395.3985445      | 1st-Qu => 2020-10-10T12:00:37Z |
+# | Mean   => 1683.39943118574 | Mean   => 2021-07-21T12:00:37Z |
+# | Median => 1552.7969365     | Median => 2021-07-21T12:00:37Z |
+# | 3rd-Qu => 2634.8056645     | 3rd-Qu => 2022-05-01T12:00:37Z |
+# | Max    => 4812.087402      | Max    => 2023-02-09T00:00:37Z |
+# +----------------------------+--------------------------------+
+</code></pre>
+
+
+<p>
+Here are D3.js plots:
+</p>
+
+<pre><code class="perl6">
+my %ts4 = %ccTS.map({ $_.key => $_.value.map(-> %r { %( date => %r<DateTime>.Str.substr(0,10), value => %r<Close>.Numeric, group => $_.key ) }).grep({ $_.<value> ~~ Numeric }) });
+say %ts4>>.elems;
+</code></pre>
+
+<pre><code>
+# {BTC => 1136, ETH => 1136}
+</code></pre>
+
+
+<pre><code class="perl6">
+deduce-type(%ts4<BTC>)
+</code></pre>
+
+<pre><code>
+# Vector(Struct([date, group, value], [Str, Str, Rat]), 1136)
+</code></pre>
+
+
+<pre><code class="perl6">
+js-d3-date-list-plot(%ts4<BTC>, plot-label => 'BTC', width => 800, height => 400, format => 'html', div-id => 'BTC');
+</code></pre>
+
+<!DOCTYPE html>
+<head>
+    <script src="https://d3js.org/d3.v7.js"></script>
+</head>
+<body>
+
+<div id="BTC"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {"left":40,"right":84,"top":40,"bottom":40},
+    width = 800 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3
+   .select("#BTC")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .style("background", "white")
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")")
+
+// Obtain title
+var title = "BTC"
+
+if ( title.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        //.style("text-decoration", "underline")
+        .text(title);
+}
+
+// Obtain x-axis label
+var xAxisLabel = ""
+var xAxisLabelFontSize = 12
+
+if ( xAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", height + margin.bottom - xAxisLabelFontSize/2)
+        .attr("text-anchor", "middle")
+        .style("font-size", xAxisLabelFontSize.toString() + "px")
+        .text(xAxisLabel);
+}
+
+// Obtain y-axis label
+var yAxisLabel = ""
+var yAxisLabelFontSize = 12
+
+if ( yAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", - (height / 2))
+        .attr("y", 0 - margin.left + yAxisLabelFontSize)
+        .attr("text-anchor", "middle")
+        .style("font-size", yAxisLabelFontSize.toString() + "px")
+        .text(yAxisLabel);
+}
+
+// Obtain data
+var data = [{"date":"2020-01-01","value":7200.174316,"group":"BTC"},{"date":"2020-01-02","value":6985.470215,"group":"BTC"},{"date":"2020-01-03","group":"BTC","value":7344.884277},{"date":"2020-01-04","value":7410.656738,"group":"BTC"},{"date":"2020-01-05","value":7411.317383,"group":"BTC"},{"group":"BTC","value":7769.219238,"date":"2020-01-06"},{"date":"2020-01-07","group":"BTC","value":8163.692383},{"value":8079.862793,"group":"BTC","date":"2020-01-08"},{"date":"2020-01-09","value":7879.071289,"group":"BTC"},{"date":"2020-01-10","group":"BTC","value":8166.554199},{"date":"2020-01-11","value":8037.537598,"group":"BTC"},{"date":"2020-01-12","group":"BTC","value":8192.494141},{"group":"BTC","date":"2020-01-13","value":8144.194336},{"date":"2020-01-14","value":8827.764648,"group":"BTC"},{"group":"BTC","value":8807.010742,"date":"2020-01-15"},{"value":8723.786133,"date":"2020-01-16","group":"BTC"},{"group":"BTC","date":"2020-01-17","value":8929.038086},{"date":"2020-01-18","group":"BTC","value":8942.808594},{"group":"BTC","date":"2020-01-19","value":8706.245117},{"value":8657.642578,"date":"2020-01-20","group":"BTC"},{"value":8745.894531,"group":"BTC","date":"2020-01-21"},{"group":"BTC","value":8680.875977,"date":"2020-01-22"},{"group":"BTC","value":8406.515625,"date":"2020-01-23"},{"group":"BTC","value":8445.43457,"date":"2020-01-24"},{"date":"2020-01-25","value":8367.847656,"group":"BTC"},{"date":"2020-01-26","group":"BTC","value":8596.830078},{"date":"2020-01-27","group":"BTC","value":8909.819336},{"value":9358.589844,"date":"2020-01-28","group":"BTC"},{"value":9316.629883,"date":"2020-01-29","group":"BTC"},{"date":"2020-01-30","group":"BTC","value":9508.993164},{"date":"2020-01-31","value":9350.529297,"group":"BTC"},{"value":9392.875,"date":"2020-02-01","group":"BTC"},{"date":"2020-02-02","group":"BTC","value":9344.365234},{"date":"2020-02-03","value":9293.521484,"group":"BTC"},{"value":9180.962891,"date":"2020-02-04","group":"BTC"},{"group":"BTC","value":9613.423828,"date":"2020-02-05"},{"date":"2020-02-06","group":"BTC","value":9729.801758},{"group":"BTC","value":9795.943359,"date":"2020-02-07"},{"group":"BTC","value":9865.119141,"date":"2020-02-08"},{"date":"2020-02-09","value":10116.673828,"group":"BTC"},{"date":"2020-02-10","value":9856.611328,"group":"BTC"},{"group":"BTC","value":10208.236328,"date":"2020-02-11"},{"value":10326.054688,"date":"2020-02-12","group":"BTC"},{"group":"BTC","date":"2020-02-13","value":10214.379883},{"group":"BTC","value":10312.116211,"date":"2020-02-14"},{"date":"2020-02-15","value":9889.424805,"group":"BTC"},{"group":"BTC","value":9934.433594,"date":"2020-02-16"},{"group":"BTC","date":"2020-02-17","value":9690.142578},{"date":"2020-02-18","group":"BTC","value":10141.996094},{"group":"BTC","date":"2020-02-19","value":9633.386719},{"group":"BTC","date":"2020-02-20","value":9608.475586},{"date":"2020-02-21","value":9686.441406,"group":"BTC"},{"group":"BTC","date":"2020-02-22","value":9663.181641},{"group":"BTC","value":9924.515625,"date":"2020-02-23"},{"date":"2020-02-24","value":9650.174805,"group":"BTC"},{"group":"BTC","value":9341.705078,"date":"2020-02-25"},{"group":"BTC","date":"2020-02-26","value":8820.522461},{"group":"BTC","date":"2020-02-27","value":8784.494141},{"date":"2020-02-28","group":"BTC","value":8672.455078},{"group":"BTC","value":8599.508789,"date":"2020-02-29"},{"date":"2020-03-01","group":"BTC","value":8562.454102},{"value":8869.669922,"group":"BTC","date":"2020-03-02"},{"group":"BTC","value":8787.786133,"date":"2020-03-03"},{"value":8755.246094,"group":"BTC","date":"2020-03-04"},{"date":"2020-03-05","value":9078.762695,"group":"BTC"},{"date":"2020-03-06","group":"BTC","value":9122.545898},{"group":"BTC","date":"2020-03-07","value":8909.954102},{"value":8108.116211,"group":"BTC","date":"2020-03-08"},{"group":"BTC","value":7923.644531,"date":"2020-03-09"},{"group":"BTC","value":7909.729492,"date":"2020-03-10"},{"group":"BTC","date":"2020-03-11","value":7911.430176},{"group":"BTC","date":"2020-03-12","value":4970.788086},{"date":"2020-03-13","group":"BTC","value":5563.707031},{"group":"BTC","value":5200.366211,"date":"2020-03-14"},{"value":5392.314941,"group":"BTC","date":"2020-03-15"},{"value":5014.47998,"date":"2020-03-16","group":"BTC"},{"date":"2020-03-17","group":"BTC","value":5225.629395},{"date":"2020-03-18","group":"BTC","value":5238.438477},{"group":"BTC","date":"2020-03-19","value":6191.192871},{"date":"2020-03-20","group":"BTC","value":6198.77832},{"value":6185.066406,"group":"BTC","date":"2020-03-21"},{"value":5830.254883,"group":"BTC","date":"2020-03-22"},{"group":"BTC","value":6416.314941,"date":"2020-03-23"},{"value":6734.803711,"group":"BTC","date":"2020-03-24"},{"value":6681.062988,"group":"BTC","date":"2020-03-25"},{"group":"BTC","value":6716.44043,"date":"2020-03-26"},{"date":"2020-03-27","group":"BTC","value":6469.79834},{"date":"2020-03-28","value":6242.193848,"group":"BTC"},{"group":"BTC","date":"2020-03-29","value":5922.042969},{"value":6429.841797,"group":"BTC","date":"2020-03-30"},{"value":6438.644531,"group":"BTC","date":"2020-03-31"},{"group":"BTC","value":6606.776367,"date":"2020-04-01"},{"group":"BTC","value":6793.624512,"date":"2020-04-02"},{"date":"2020-04-03","group":"BTC","value":6733.387207},{"date":"2020-04-04","value":6867.527344,"group":"BTC"},{"value":6791.129395,"group":"BTC","date":"2020-04-05"},{"group":"BTC","value":7271.78125,"date":"2020-04-06"},{"value":7176.414551,"group":"BTC","date":"2020-04-07"},{"group":"BTC","value":7334.098633,"date":"2020-04-08"},{"value":7302.089355,"group":"BTC","date":"2020-04-09"},{"value":6865.493164,"group":"BTC","date":"2020-04-10"},{"group":"BTC","value":6859.083008,"date":"2020-04-11"},{"value":6971.091797,"group":"BTC","date":"2020-04-12"},{"date":"2020-04-13","value":6845.037598,"group":"BTC"},{"date":"2020-04-14","value":6842.427734,"group":"BTC"},{"value":6642.109863,"date":"2020-04-15","group":"BTC"},{"group":"BTC","value":7116.804199,"date":"2020-04-16"},{"value":7096.18457,"date":"2020-04-17","group":"BTC"},{"group":"BTC","value":7257.665039,"date":"2020-04-18"},{"date":"2020-04-19","group":"BTC","value":7189.424805},{"date":"2020-04-20","value":6881.958496,"group":"BTC"},{"group":"BTC","value":6880.323242,"date":"2020-04-21"},{"date":"2020-04-22","group":"BTC","value":7117.20752},{"value":7429.724609,"date":"2020-04-23","group":"BTC"},{"group":"BTC","value":7550.900879,"date":"2020-04-24"},{"group":"BTC","date":"2020-04-25","value":7569.936035},{"date":"2020-04-26","value":7679.867188,"group":"BTC"},{"group":"BTC","date":"2020-04-27","value":7795.601074},{"date":"2020-04-28","group":"BTC","value":7807.058594},{"date":"2020-04-29","group":"BTC","value":8801.038086},{"group":"BTC","date":"2020-04-30","value":8658.553711},{"date":"2020-05-01","group":"BTC","value":8864.766602},{"date":"2020-05-02","value":8988.59668,"group":"BTC"},{"group":"BTC","value":8897.46875,"date":"2020-05-03"},{"value":8912.654297,"group":"BTC","date":"2020-05-04"},{"date":"2020-05-05","value":9003.070313,"group":"BTC"},{"group":"BTC","date":"2020-05-06","value":9268.761719},{"group":"BTC","date":"2020-05-07","value":9951.518555},{"value":9842.666016,"date":"2020-05-08","group":"BTC"},{"group":"BTC","value":9593.896484,"date":"2020-05-09"},{"date":"2020-05-10","group":"BTC","value":8756.430664},{"date":"2020-05-11","value":8601.795898,"group":"BTC"},{"group":"BTC","value":8804.477539,"date":"2020-05-12"},{"value":9269.987305,"date":"2020-05-13","group":"BTC"},{"group":"BTC","value":9733.72168,"date":"2020-05-14"},{"date":"2020-05-15","group":"BTC","value":9328.197266},{"group":"BTC","date":"2020-05-16","value":9377.013672},{"group":"BTC","date":"2020-05-17","value":9670.739258},{"value":9726.575195,"group":"BTC","date":"2020-05-18"},{"value":9729.038086,"group":"BTC","date":"2020-05-19"},{"date":"2020-05-20","value":9522.981445,"group":"BTC"},{"group":"BTC","date":"2020-05-21","value":9081.761719},{"value":9182.577148,"group":"BTC","date":"2020-05-22"},{"group":"BTC","value":9209.287109,"date":"2020-05-23"},{"group":"BTC","value":8790.368164,"date":"2020-05-24"},{"value":8906.93457,"group":"BTC","date":"2020-05-25"},{"date":"2020-05-26","value":8835.052734,"group":"BTC"},{"group":"BTC","value":9181.017578,"date":"2020-05-27"},{"date":"2020-05-28","group":"BTC","value":9525.750977},{"date":"2020-05-29","value":9439.124023,"group":"BTC"},{"group":"BTC","date":"2020-05-30","value":9700.414063},{"value":9461.058594,"date":"2020-05-31","group":"BTC"},{"group":"BTC","date":"2020-06-01","value":10167.268555},{"date":"2020-06-02","value":9529.803711,"group":"BTC"},{"group":"BTC","value":9656.717773,"date":"2020-06-03"},{"value":9800.636719,"group":"BTC","date":"2020-06-04"},{"group":"BTC","date":"2020-06-05","value":9665.533203},{"group":"BTC","date":"2020-06-06","value":9653.679688},{"group":"BTC","value":9758.852539,"date":"2020-06-07"},{"value":9771.489258,"date":"2020-06-08","group":"BTC"},{"value":9795.700195,"date":"2020-06-09","group":"BTC"},{"value":9870.094727,"group":"BTC","date":"2020-06-10"},{"group":"BTC","value":9321.78125,"date":"2020-06-11"},{"group":"BTC","date":"2020-06-12","value":9480.84375},{"group":"BTC","date":"2020-06-13","value":9475.277344},{"value":9386.788086,"group":"BTC","date":"2020-06-14"},{"value":9450.702148,"date":"2020-06-15","group":"BTC"},{"group":"BTC","date":"2020-06-16","value":9538.024414},{"group":"BTC","value":9480.254883,"date":"2020-06-17"},{"value":9411.84082,"group":"BTC","date":"2020-06-18"},{"date":"2020-06-19","value":9288.018555,"group":"BTC"},{"date":"2020-06-20","group":"BTC","value":9332.34082},{"date":"2020-06-21","value":9303.629883,"group":"BTC"},{"date":"2020-06-22","value":9648.717773,"group":"BTC"},{"group":"BTC","date":"2020-06-23","value":9629.658203},{"group":"BTC","value":9313.610352,"date":"2020-06-24"},{"value":9264.813477,"date":"2020-06-25","group":"BTC"},{"group":"BTC","date":"2020-06-26","value":9162.917969},{"group":"BTC","date":"2020-06-27","value":9045.390625},{"value":9143.582031,"group":"BTC","date":"2020-06-28"},{"date":"2020-06-29","value":9190.854492,"group":"BTC"},{"date":"2020-06-30","value":9137.993164,"group":"BTC"},{"date":"2020-07-01","value":9228.325195,"group":"BTC"},{"value":9123.410156,"date":"2020-07-02","group":"BTC"},{"date":"2020-07-03","group":"BTC","value":9087.303711},{"date":"2020-07-04","value":9132.488281,"group":"BTC"},{"date":"2020-07-05","value":9073.942383,"group":"BTC"},{"value":9375.474609,"group":"BTC","date":"2020-07-06"},{"value":9252.277344,"group":"BTC","date":"2020-07-07"},{"date":"2020-07-08","value":9428.333008,"group":"BTC"},{"date":"2020-07-09","value":9277.967773,"group":"BTC"},{"value":9278.807617,"date":"2020-07-10","group":"BTC"},{"group":"BTC","date":"2020-07-11","value":9240.34668},{"group":"BTC","value":9276.5,"date":"2020-07-12"},{"date":"2020-07-13","group":"BTC","value":9243.614258},{"date":"2020-07-14","group":"BTC","value":9243.213867},{"date":"2020-07-15","value":9192.836914,"group":"BTC"},{"group":"BTC","date":"2020-07-16","value":9132.227539},{"group":"BTC","value":9151.392578,"date":"2020-07-17"},{"value":9159.040039,"group":"BTC","date":"2020-07-18"},{"value":9185.817383,"group":"BTC","date":"2020-07-19"},{"group":"BTC","date":"2020-07-20","value":9164.231445},{"value":9374.887695,"date":"2020-07-21","group":"BTC"},{"date":"2020-07-22","value":9525.363281,"group":"BTC"},{"date":"2020-07-23","group":"BTC","value":9581.072266},{"date":"2020-07-24","group":"BTC","value":9536.892578},{"value":9677.113281,"group":"BTC","date":"2020-07-25"},{"date":"2020-07-26","group":"BTC","value":9905.166992},{"value":10990.873047,"date":"2020-07-27","group":"BTC"},{"value":10912.823242,"group":"BTC","date":"2020-07-28"},{"group":"BTC","date":"2020-07-29","value":11100.467773},{"value":11111.213867,"group":"BTC","date":"2020-07-30"},{"value":11323.466797,"group":"BTC","date":"2020-07-31"},{"value":11759.592773,"group":"BTC","date":"2020-08-01"},{"group":"BTC","value":11053.614258,"date":"2020-08-02"},{"value":11246.348633,"group":"BTC","date":"2020-08-03"},{"value":11205.892578,"group":"BTC","date":"2020-08-04"},{"value":11747.022461,"group":"BTC","date":"2020-08-05"},{"date":"2020-08-06","value":11779.773438,"group":"BTC"},{"value":11601.472656,"group":"BTC","date":"2020-08-07"},{"date":"2020-08-08","group":"BTC","value":11754.045898},{"date":"2020-08-09","group":"BTC","value":11675.739258},{"date":"2020-08-10","group":"BTC","value":11878.111328},{"date":"2020-08-11","group":"BTC","value":11410.525391},{"value":11584.93457,"group":"BTC","date":"2020-08-12"},{"date":"2020-08-13","group":"BTC","value":11784.137695},{"group":"BTC","date":"2020-08-14","value":11768.871094},{"date":"2020-08-15","group":"BTC","value":11865.698242},{"date":"2020-08-16","value":11892.803711,"group":"BTC"},{"value":12254.402344,"group":"BTC","date":"2020-08-17"},{"value":11991.233398,"date":"2020-08-18","group":"BTC"},{"value":11758.283203,"date":"2020-08-19","group":"BTC"},{"value":11878.37207,"group":"BTC","date":"2020-08-20"},{"group":"BTC","value":11592.489258,"date":"2020-08-21"},{"date":"2020-08-22","value":11681.825195,"group":"BTC"},{"group":"BTC","date":"2020-08-23","value":11664.847656},{"group":"BTC","date":"2020-08-24","value":11774.595703},{"date":"2020-08-25","group":"BTC","value":11366.134766},{"date":"2020-08-26","group":"BTC","value":11488.363281},{"date":"2020-08-27","group":"BTC","value":11323.397461},{"value":11542.5,"date":"2020-08-28","group":"BTC"},{"date":"2020-08-29","value":11506.865234,"group":"BTC"},{"group":"BTC","value":11711.505859,"date":"2020-08-30"},{"group":"BTC","value":11680.820313,"date":"2020-08-31"},{"group":"BTC","date":"2020-09-01","value":11970.478516},{"group":"BTC","value":11414.03418,"date":"2020-09-02"},{"group":"BTC","date":"2020-09-03","value":10245.296875},{"group":"BTC","value":10511.813477,"date":"2020-09-04"},{"value":10169.567383,"group":"BTC","date":"2020-09-05"},{"value":10280.351563,"date":"2020-09-06","group":"BTC"},{"value":10369.563477,"group":"BTC","date":"2020-09-07"},{"value":10131.516602,"group":"BTC","date":"2020-09-08"},{"value":10242.347656,"date":"2020-09-09","group":"BTC"},{"date":"2020-09-10","group":"BTC","value":10363.138672},{"date":"2020-09-11","group":"BTC","value":10400.915039},{"value":10442.170898,"group":"BTC","date":"2020-09-12"},{"group":"BTC","date":"2020-09-13","value":10323.755859},{"date":"2020-09-14","value":10680.837891,"group":"BTC"},{"date":"2020-09-15","group":"BTC","value":10796.951172},{"value":10974.905273,"group":"BTC","date":"2020-09-16"},{"date":"2020-09-17","value":10948.990234,"group":"BTC"},{"group":"BTC","value":10944.585938,"date":"2020-09-18"},{"date":"2020-09-19","value":11094.34668,"group":"BTC"},{"date":"2020-09-20","value":10938.271484,"group":"BTC"},{"date":"2020-09-21","value":10462.259766,"group":"BTC"},{"value":10538.459961,"group":"BTC","date":"2020-09-22"},{"group":"BTC","value":10246.186523,"date":"2020-09-23"},{"date":"2020-09-24","group":"BTC","value":10760.066406},{"value":10692.716797,"date":"2020-09-25","group":"BTC"},{"value":10750.723633,"group":"BTC","date":"2020-09-26"},{"group":"BTC","date":"2020-09-27","value":10775.269531},{"date":"2020-09-28","group":"BTC","value":10709.652344},{"date":"2020-09-29","group":"BTC","value":10844.640625},{"date":"2020-09-30","value":10784.491211,"group":"BTC"},{"group":"BTC","value":10619.452148,"date":"2020-10-01"},{"date":"2020-10-02","value":10575.974609,"group":"BTC"},{"value":10549.329102,"group":"BTC","date":"2020-10-03"},{"date":"2020-10-04","group":"BTC","value":10669.583008},{"group":"BTC","date":"2020-10-05","value":10793.339844},{"group":"BTC","date":"2020-10-06","value":10604.40625},{"group":"BTC","date":"2020-10-07","value":10668.96875},{"group":"BTC","date":"2020-10-08","value":10915.685547},{"date":"2020-10-09","value":11064.458008,"group":"BTC"},{"value":11296.361328,"group":"BTC","date":"2020-10-10"},{"date":"2020-10-11","value":11384.181641,"group":"BTC"},{"value":11555.363281,"date":"2020-10-12","group":"BTC"},{"value":11425.899414,"date":"2020-10-13","group":"BTC"},{"value":11429.506836,"date":"2020-10-14","group":"BTC"},{"value":11495.349609,"group":"BTC","date":"2020-10-15"},{"group":"BTC","date":"2020-10-16","value":11322.123047},{"date":"2020-10-17","group":"BTC","value":11358.101563},{"group":"BTC","date":"2020-10-18","value":11483.359375},{"date":"2020-10-19","value":11742.037109,"group":"BTC"},{"group":"BTC","date":"2020-10-20","value":11916.334961},{"group":"BTC","value":12823.689453,"date":"2020-10-21"},{"group":"BTC","value":12965.891602,"date":"2020-10-22"},{"group":"BTC","value":12931.539063,"date":"2020-10-23"},{"date":"2020-10-24","value":13108.0625,"group":"BTC"},{"value":13031.173828,"group":"BTC","date":"2020-10-25"},{"date":"2020-10-26","value":13075.248047,"group":"BTC"},{"group":"BTC","value":13654.21875,"date":"2020-10-27"},{"date":"2020-10-28","value":13271.285156,"group":"BTC"},{"value":13437.882813,"date":"2020-10-29","group":"BTC"},{"date":"2020-10-30","group":"BTC","value":13546.522461},{"group":"BTC","date":"2020-10-31","value":13780.995117},{"group":"BTC","value":13737.109375,"date":"2020-11-01"},{"group":"BTC","date":"2020-11-02","value":13550.489258},{"date":"2020-11-03","value":13950.300781,"group":"BTC"},{"group":"BTC","value":14133.707031,"date":"2020-11-04"},{"value":15579.848633,"date":"2020-11-05","group":"BTC"},{"value":15565.880859,"group":"BTC","date":"2020-11-06"},{"value":14833.753906,"group":"BTC","date":"2020-11-07"},{"group":"BTC","date":"2020-11-08","value":15479.567383},{"group":"BTC","date":"2020-11-09","value":15332.31543},{"group":"BTC","value":15290.902344,"date":"2020-11-10"},{"group":"BTC","value":15701.339844,"date":"2020-11-11"},{"value":16276.34375,"group":"BTC","date":"2020-11-12"},{"group":"BTC","value":16317.808594,"date":"2020-11-13"},{"date":"2020-11-14","group":"BTC","value":16068.138672},{"date":"2020-11-15","value":15955.587891,"group":"BTC"},{"group":"BTC","date":"2020-11-16","value":16716.111328},{"value":17645.40625,"group":"BTC","date":"2020-11-17"},{"group":"BTC","value":17804.005859,"date":"2020-11-18"},{"value":17817.089844,"group":"BTC","date":"2020-11-19"},{"value":18621.314453,"group":"BTC","date":"2020-11-20"},{"group":"BTC","value":18642.232422,"date":"2020-11-21"},{"date":"2020-11-22","group":"BTC","value":18370.001953},{"value":18364.121094,"group":"BTC","date":"2020-11-23"},{"date":"2020-11-24","value":19107.464844,"group":"BTC"},{"value":18732.121094,"date":"2020-11-25","group":"BTC"},{"value":17150.623047,"group":"BTC","date":"2020-11-26"},{"group":"BTC","date":"2020-11-27","value":17108.402344},{"group":"BTC","value":17717.414063,"date":"2020-11-28"},{"value":18177.484375,"date":"2020-11-29","group":"BTC"},{"value":19625.835938,"group":"BTC","date":"2020-11-30"},{"group":"BTC","date":"2020-12-01","value":18802.998047},{"group":"BTC","value":19201.091797,"date":"2020-12-02"},{"group":"BTC","date":"2020-12-03","value":19445.398438},{"group":"BTC","date":"2020-12-04","value":18699.765625},{"value":19154.230469,"date":"2020-12-05","group":"BTC"},{"group":"BTC","value":19345.121094,"date":"2020-12-06"},{"value":19191.630859,"group":"BTC","date":"2020-12-07"},{"date":"2020-12-08","value":18321.144531,"group":"BTC"},{"group":"BTC","value":18553.916016,"date":"2020-12-09"},{"group":"BTC","value":18264.992188,"date":"2020-12-10"},{"date":"2020-12-11","value":18058.904297,"group":"BTC"},{"date":"2020-12-12","value":18803.65625,"group":"BTC"},{"date":"2020-12-13","value":19142.382813,"group":"BTC"},{"group":"BTC","date":"2020-12-14","value":19246.644531},{"group":"BTC","value":19417.076172,"date":"2020-12-15"},{"group":"BTC","date":"2020-12-16","value":21310.597656},{"group":"BTC","value":22805.162109,"date":"2020-12-17"},{"value":23137.960938,"group":"BTC","date":"2020-12-18"},{"group":"BTC","date":"2020-12-19","value":23869.832031},{"date":"2020-12-20","group":"BTC","value":23477.294922},{"date":"2020-12-21","group":"BTC","value":22803.082031},{"group":"BTC","date":"2020-12-22","value":23783.029297},{"group":"BTC","date":"2020-12-23","value":23241.345703},{"group":"BTC","date":"2020-12-24","value":23735.949219},{"value":24664.791016,"group":"BTC","date":"2020-12-25"},{"date":"2020-12-26","value":26437.037109,"group":"BTC"},{"date":"2020-12-27","value":26272.294922,"group":"BTC"},{"group":"BTC","date":"2020-12-28","value":27084.808594},{"date":"2020-12-29","group":"BTC","value":27362.4375},{"value":28840.953125,"date":"2020-12-30","group":"BTC"},{"value":29001.720703,"group":"BTC","date":"2020-12-31"},{"group":"BTC","date":"2021-01-01","value":29374.152344},{"value":32127.267578,"group":"BTC","date":"2021-01-02"},{"value":32782.023438,"group":"BTC","date":"2021-01-03"},{"value":31971.914063,"group":"BTC","date":"2021-01-04"},{"value":33992.429688,"group":"BTC","date":"2021-01-05"},{"date":"2021-01-06","group":"BTC","value":36824.363281},{"value":39371.042969,"group":"BTC","date":"2021-01-07"},{"value":40797.609375,"group":"BTC","date":"2021-01-08"},{"date":"2021-01-09","value":40254.546875,"group":"BTC"},{"value":38356.441406,"date":"2021-01-10","group":"BTC"},{"value":35566.65625,"date":"2021-01-11","group":"BTC"},{"value":33922.960938,"group":"BTC","date":"2021-01-12"},{"date":"2021-01-13","value":37316.359375,"group":"BTC"},{"group":"BTC","date":"2021-01-14","value":39187.328125},{"value":36825.367188,"group":"BTC","date":"2021-01-15"},{"group":"BTC","value":36178.140625,"date":"2021-01-16"},{"value":35791.277344,"group":"BTC","date":"2021-01-17"},{"value":36630.074219,"group":"BTC","date":"2021-01-18"},{"value":36069.804688,"group":"BTC","date":"2021-01-19"},{"date":"2021-01-20","value":35547.75,"group":"BTC"},{"group":"BTC","date":"2021-01-21","value":30825.699219},{"date":"2021-01-22","group":"BTC","value":33005.761719},{"group":"BTC","value":32067.642578,"date":"2021-01-23"},{"value":32289.378906,"date":"2021-01-24","group":"BTC"},{"date":"2021-01-25","value":32366.392578,"group":"BTC"},{"value":32569.849609,"group":"BTC","date":"2021-01-26"},{"group":"BTC","date":"2021-01-27","value":30432.546875},{"date":"2021-01-28","value":33466.097656,"group":"BTC"},{"date":"2021-01-29","value":34316.386719,"group":"BTC"},{"group":"BTC","value":34269.523438,"date":"2021-01-30"},{"group":"BTC","date":"2021-01-31","value":33114.359375},{"group":"BTC","value":33537.175781,"date":"2021-02-01"},{"group":"BTC","date":"2021-02-02","value":35510.289063},{"group":"BTC","value":37472.089844,"date":"2021-02-03"},{"group":"BTC","date":"2021-02-04","value":36926.066406},{"group":"BTC","value":38144.308594,"date":"2021-02-05"},{"group":"BTC","date":"2021-02-06","value":39266.011719},{"group":"BTC","value":38903.441406,"date":"2021-02-07"},{"value":46196.464844,"group":"BTC","date":"2021-02-08"},{"group":"BTC","value":46481.105469,"date":"2021-02-09"},{"value":44918.183594,"group":"BTC","date":"2021-02-10"},{"group":"BTC","date":"2021-02-11","value":47909.332031},{"date":"2021-02-12","value":47504.851563,"group":"BTC"},{"date":"2021-02-13","group":"BTC","value":47105.515625},{"date":"2021-02-14","group":"BTC","value":48717.289063},{"date":"2021-02-15","value":47945.058594,"group":"BTC"},{"value":49199.871094,"date":"2021-02-16","group":"BTC"},{"value":52149.007813,"group":"BTC","date":"2021-02-17"},{"date":"2021-02-18","value":51679.796875,"group":"BTC"},{"date":"2021-02-19","value":55888.132813,"group":"BTC"},{"group":"BTC","value":56099.519531,"date":"2021-02-20"},{"group":"BTC","value":57539.945313,"date":"2021-02-21"},{"date":"2021-02-22","group":"BTC","value":54207.320313},{"date":"2021-02-23","value":48824.425781,"group":"BTC"},{"group":"BTC","date":"2021-02-24","value":49705.332031},{"group":"BTC","date":"2021-02-25","value":47093.851563},{"date":"2021-02-26","group":"BTC","value":46339.761719},{"date":"2021-02-27","group":"BTC","value":46188.453125},{"group":"BTC","value":45137.769531,"date":"2021-02-28"},{"group":"BTC","value":49631.242188,"date":"2021-03-01"},{"group":"BTC","value":48378.988281,"date":"2021-03-02"},{"value":50538.242188,"group":"BTC","date":"2021-03-03"},{"value":48561.167969,"group":"BTC","date":"2021-03-04"},{"value":48927.304688,"group":"BTC","date":"2021-03-05"},{"value":48912.382813,"group":"BTC","date":"2021-03-06"},{"group":"BTC","value":51206.691406,"date":"2021-03-07"},{"date":"2021-03-08","value":52246.523438,"group":"BTC"},{"value":54824.117188,"group":"BTC","date":"2021-03-09"},{"date":"2021-03-10","group":"BTC","value":56008.550781},{"group":"BTC","date":"2021-03-11","value":57805.121094},{"date":"2021-03-12","group":"BTC","value":57332.089844},{"value":61243.085938,"group":"BTC","date":"2021-03-13"},{"date":"2021-03-14","group":"BTC","value":59302.316406},{"date":"2021-03-15","value":55907.199219,"group":"BTC"},{"group":"BTC","date":"2021-03-16","value":56804.902344},{"group":"BTC","date":"2021-03-17","value":58870.894531},{"value":57858.921875,"group":"BTC","date":"2021-03-18"},{"value":58346.652344,"group":"BTC","date":"2021-03-19"},{"value":58313.644531,"date":"2021-03-20","group":"BTC"},{"date":"2021-03-21","group":"BTC","value":57523.421875},{"value":54529.144531,"group":"BTC","date":"2021-03-22"},{"date":"2021-03-23","value":54738.945313,"group":"BTC"},{"date":"2021-03-24","group":"BTC","value":52774.265625},{"group":"BTC","value":51704.160156,"date":"2021-03-25"},{"date":"2021-03-26","value":55137.3125,"group":"BTC"},{"group":"BTC","date":"2021-03-27","value":55973.511719},{"date":"2021-03-28","group":"BTC","value":55950.746094},{"value":57750.199219,"date":"2021-03-29","group":"BTC"},{"group":"BTC","value":58917.691406,"date":"2021-03-30"},{"value":58918.832031,"group":"BTC","date":"2021-03-31"},{"group":"BTC","date":"2021-04-01","value":59095.808594},{"date":"2021-04-02","value":59384.3125,"group":"BTC"},{"value":57603.890625,"group":"BTC","date":"2021-04-03"},{"group":"BTC","date":"2021-04-04","value":58758.554688},{"date":"2021-04-05","group":"BTC","value":59057.878906},{"date":"2021-04-06","group":"BTC","value":58192.359375},{"date":"2021-04-07","value":56048.9375,"group":"BTC"},{"date":"2021-04-08","value":58323.953125,"group":"BTC"},{"group":"BTC","value":58245.003906,"date":"2021-04-09"},{"group":"BTC","date":"2021-04-10","value":59793.234375},{"value":60204.964844,"group":"BTC","date":"2021-04-11"},{"value":59893.453125,"group":"BTC","date":"2021-04-12"},{"group":"BTC","value":63503.457031,"date":"2021-04-13"},{"value":63109.695313,"date":"2021-04-14","group":"BTC"},{"group":"BTC","value":63314.011719,"date":"2021-04-15"},{"group":"BTC","date":"2021-04-16","value":61572.789063},{"value":60683.820313,"date":"2021-04-17","group":"BTC"},{"date":"2021-04-18","group":"BTC","value":56216.183594},{"group":"BTC","date":"2021-04-19","value":55724.265625},{"group":"BTC","date":"2021-04-20","value":56473.03125},{"value":53906.089844,"group":"BTC","date":"2021-04-21"},{"date":"2021-04-22","group":"BTC","value":51762.273438},{"group":"BTC","value":51093.652344,"date":"2021-04-23"},{"date":"2021-04-24","value":50050.867188,"group":"BTC"},{"value":49004.253906,"group":"BTC","date":"2021-04-25"},{"value":54021.753906,"date":"2021-04-26","group":"BTC"},{"value":55033.117188,"group":"BTC","date":"2021-04-27"},{"group":"BTC","value":54824.703125,"date":"2021-04-28"},{"group":"BTC","date":"2021-04-29","value":53555.109375},{"value":57750.175781,"group":"BTC","date":"2021-04-30"},{"value":57828.050781,"group":"BTC","date":"2021-05-01"},{"date":"2021-05-02","group":"BTC","value":56631.078125},{"value":57200.292969,"date":"2021-05-03","group":"BTC"},{"date":"2021-05-04","value":53333.539063,"group":"BTC"},{"group":"BTC","date":"2021-05-05","value":57424.007813},{"group":"BTC","date":"2021-05-06","value":56396.515625},{"group":"BTC","date":"2021-05-07","value":57356.402344},{"value":58803.777344,"date":"2021-05-08","group":"BTC"},{"date":"2021-05-09","group":"BTC","value":58232.316406},{"group":"BTC","date":"2021-05-10","value":55859.796875},{"value":56704.574219,"group":"BTC","date":"2021-05-11"},{"value":49150.535156,"group":"BTC","date":"2021-05-12"},{"group":"BTC","value":49716.191406,"date":"2021-05-13"},{"value":49880.535156,"group":"BTC","date":"2021-05-14"},{"date":"2021-05-15","value":46760.1875,"group":"BTC"},{"group":"BTC","date":"2021-05-16","value":46456.058594},{"date":"2021-05-17","value":43537.511719,"group":"BTC"},{"date":"2021-05-18","group":"BTC","value":42909.402344},{"group":"BTC","value":37002.441406,"date":"2021-05-19"},{"date":"2021-05-20","group":"BTC","value":40782.738281},{"group":"BTC","value":37304.691406,"date":"2021-05-21"},{"value":37536.632813,"date":"2021-05-22","group":"BTC"},{"value":34770.582031,"group":"BTC","date":"2021-05-23"},{"date":"2021-05-24","value":38705.980469,"group":"BTC"},{"date":"2021-05-25","value":38402.222656,"group":"BTC"},{"value":39294.199219,"group":"BTC","date":"2021-05-26"},{"value":38436.96875,"date":"2021-05-27","group":"BTC"},{"date":"2021-05-28","value":35697.605469,"group":"BTC"},{"date":"2021-05-29","group":"BTC","value":34616.066406},{"value":35678.128906,"date":"2021-05-30","group":"BTC"},{"date":"2021-05-31","value":37332.855469,"group":"BTC"},{"group":"BTC","date":"2021-06-01","value":36684.925781},{"date":"2021-06-02","group":"BTC","value":37575.179688},{"group":"BTC","value":39208.765625,"date":"2021-06-03"},{"group":"BTC","value":36894.40625,"date":"2021-06-04"},{"group":"BTC","date":"2021-06-05","value":35551.957031},{"date":"2021-06-06","value":35862.378906,"group":"BTC"},{"value":33560.707031,"date":"2021-06-07","group":"BTC"},{"date":"2021-06-08","value":33472.632813,"group":"BTC"},{"date":"2021-06-09","group":"BTC","value":37345.121094},{"date":"2021-06-10","value":36702.597656,"group":"BTC"},{"value":37334.398438,"group":"BTC","date":"2021-06-11"},{"date":"2021-06-12","group":"BTC","value":35552.515625},{"value":39097.859375,"group":"BTC","date":"2021-06-13"},{"group":"BTC","date":"2021-06-14","value":40218.476563},{"group":"BTC","value":40406.269531,"date":"2021-06-15"},{"value":38347.0625,"date":"2021-06-16","group":"BTC"},{"date":"2021-06-17","group":"BTC","value":38053.503906},{"group":"BTC","value":35787.246094,"date":"2021-06-18"},{"date":"2021-06-19","value":35615.871094,"group":"BTC"},{"date":"2021-06-20","value":35698.296875,"group":"BTC"},{"group":"BTC","value":31676.693359,"date":"2021-06-21"},{"value":32505.660156,"group":"BTC","date":"2021-06-22"},{"date":"2021-06-23","group":"BTC","value":33723.027344},{"group":"BTC","value":34662.4375,"date":"2021-06-24"},{"group":"BTC","date":"2021-06-25","value":31637.779297},{"date":"2021-06-26","value":32186.277344,"group":"BTC"},{"group":"BTC","value":34649.644531,"date":"2021-06-27"},{"date":"2021-06-28","group":"BTC","value":34434.335938},{"value":35867.777344,"group":"BTC","date":"2021-06-29"},{"value":35040.835938,"group":"BTC","date":"2021-06-30"},{"group":"BTC","value":33572.117188,"date":"2021-07-01"},{"date":"2021-07-02","group":"BTC","value":33897.046875},{"group":"BTC","date":"2021-07-03","value":34668.546875},{"date":"2021-07-04","group":"BTC","value":35287.78125},{"date":"2021-07-05","group":"BTC","value":33746.003906},{"group":"BTC","value":34235.195313,"date":"2021-07-06"},{"date":"2021-07-07","value":33855.328125,"group":"BTC"},{"date":"2021-07-08","value":32877.371094,"group":"BTC"},{"date":"2021-07-09","group":"BTC","value":33798.011719},{"group":"BTC","date":"2021-07-10","value":33520.519531},{"date":"2021-07-11","group":"BTC","value":34240.1875},{"date":"2021-07-12","group":"BTC","value":33155.847656},{"date":"2021-07-13","value":32702.025391,"group":"BTC"},{"date":"2021-07-14","group":"BTC","value":32822.347656},{"group":"BTC","value":31780.730469,"date":"2021-07-15"},{"date":"2021-07-16","group":"BTC","value":31421.539063},{"group":"BTC","date":"2021-07-17","value":31533.068359},{"date":"2021-07-18","group":"BTC","value":31796.810547},{"value":30817.832031,"date":"2021-07-19","group":"BTC"},{"group":"BTC","value":29807.347656,"date":"2021-07-20"},{"value":32110.693359,"date":"2021-07-21","group":"BTC"},{"date":"2021-07-22","group":"BTC","value":32313.105469},{"group":"BTC","value":33581.550781,"date":"2021-07-23"},{"group":"BTC","value":34292.445313,"date":"2021-07-24"},{"value":35350.1875,"group":"BTC","date":"2021-07-25"},{"group":"BTC","value":37337.535156,"date":"2021-07-26"},{"date":"2021-07-27","group":"BTC","value":39406.941406},{"date":"2021-07-28","value":39995.90625,"group":"BTC"},{"group":"BTC","value":40008.421875,"date":"2021-07-29"},{"group":"BTC","date":"2021-07-30","value":42235.546875},{"group":"BTC","value":41626.195313,"date":"2021-07-31"},{"value":39974.894531,"date":"2021-08-01","group":"BTC"},{"date":"2021-08-02","group":"BTC","value":39201.945313},{"value":38152.980469,"date":"2021-08-03","group":"BTC"},{"value":39747.503906,"group":"BTC","date":"2021-08-04"},{"group":"BTC","value":40869.554688,"date":"2021-08-05"},{"value":42816.5,"group":"BTC","date":"2021-08-06"},{"value":44555.800781,"group":"BTC","date":"2021-08-07"},{"group":"BTC","date":"2021-08-08","value":43798.117188},{"value":46365.402344,"group":"BTC","date":"2021-08-09"},{"value":45585.03125,"date":"2021-08-10","group":"BTC"},{"value":45593.636719,"date":"2021-08-11","group":"BTC"},{"value":44428.289063,"group":"BTC","date":"2021-08-12"},{"date":"2021-08-13","group":"BTC","value":47793.320313},{"group":"BTC","date":"2021-08-14","value":47096.945313},{"group":"BTC","value":47047.003906,"date":"2021-08-15"},{"date":"2021-08-16","group":"BTC","value":46004.484375},{"date":"2021-08-17","group":"BTC","value":44695.359375},{"group":"BTC","value":44801.1875,"date":"2021-08-18"},{"group":"BTC","date":"2021-08-19","value":46717.578125},{"value":49339.175781,"group":"BTC","date":"2021-08-20"},{"date":"2021-08-21","value":48905.492188,"group":"BTC"},{"value":49321.652344,"date":"2021-08-22","group":"BTC"},{"value":49546.148438,"date":"2021-08-23","group":"BTC"},{"value":47706.117188,"group":"BTC","date":"2021-08-24"},{"date":"2021-08-25","value":48960.789063,"group":"BTC"},{"value":46942.21875,"date":"2021-08-26","group":"BTC"},{"date":"2021-08-27","group":"BTC","value":49058.667969},{"value":48902.402344,"group":"BTC","date":"2021-08-28"},{"value":48829.832031,"date":"2021-08-29","group":"BTC"},{"date":"2021-08-30","group":"BTC","value":47054.984375},{"value":47166.6875,"group":"BTC","date":"2021-08-31"},{"value":48847.027344,"date":"2021-09-01","group":"BTC"},{"group":"BTC","value":49327.722656,"date":"2021-09-02"},{"value":50025.375,"group":"BTC","date":"2021-09-03"},{"value":49944.625,"date":"2021-09-04","group":"BTC"},{"group":"BTC","value":51753.410156,"date":"2021-09-05"},{"group":"BTC","date":"2021-09-06","value":52633.535156},{"group":"BTC","value":46811.128906,"date":"2021-09-07"},{"group":"BTC","date":"2021-09-08","value":46091.390625},{"value":46391.421875,"group":"BTC","date":"2021-09-09"},{"date":"2021-09-10","value":44883.910156,"group":"BTC"},{"group":"BTC","date":"2021-09-11","value":45201.457031},{"group":"BTC","value":46063.269531,"date":"2021-09-12"},{"group":"BTC","value":44963.074219,"date":"2021-09-13"},{"group":"BTC","date":"2021-09-14","value":47092.492188},{"date":"2021-09-15","value":48176.347656,"group":"BTC"},{"group":"BTC","value":47783.359375,"date":"2021-09-16"},{"group":"BTC","value":47267.519531,"date":"2021-09-17"},{"date":"2021-09-18","group":"BTC","value":48278.363281},{"value":47260.21875,"group":"BTC","date":"2021-09-19"},{"date":"2021-09-20","group":"BTC","value":42843.800781},{"date":"2021-09-21","value":40693.675781,"group":"BTC"},{"group":"BTC","date":"2021-09-22","value":43574.507813},{"date":"2021-09-23","group":"BTC","value":44895.097656},{"date":"2021-09-24","value":42839.75,"group":"BTC"},{"date":"2021-09-25","group":"BTC","value":42716.59375},{"group":"BTC","value":43208.539063,"date":"2021-09-26"},{"group":"BTC","date":"2021-09-27","value":42235.730469},{"group":"BTC","value":41034.542969,"date":"2021-09-28"},{"date":"2021-09-29","group":"BTC","value":41564.363281},{"group":"BTC","date":"2021-09-30","value":43790.894531},{"date":"2021-10-01","value":48116.941406,"group":"BTC"},{"group":"BTC","date":"2021-10-02","value":47711.488281},{"date":"2021-10-03","value":48199.953125,"group":"BTC"},{"group":"BTC","value":49112.902344,"date":"2021-10-04"},{"group":"BTC","value":51514.8125,"date":"2021-10-05"},{"group":"BTC","date":"2021-10-06","value":55361.449219},{"group":"BTC","value":53805.984375,"date":"2021-10-07"},{"date":"2021-10-08","group":"BTC","value":53967.847656},{"value":54968.222656,"date":"2021-10-09","group":"BTC"},{"group":"BTC","date":"2021-10-10","value":54771.578125},{"date":"2021-10-11","value":57484.789063,"group":"BTC"},{"value":56041.058594,"group":"BTC","date":"2021-10-12"},{"group":"BTC","date":"2021-10-13","value":57401.097656},{"group":"BTC","date":"2021-10-14","value":57321.523438},{"value":61593.949219,"group":"BTC","date":"2021-10-15"},{"value":60892.179688,"group":"BTC","date":"2021-10-16"},{"group":"BTC","date":"2021-10-17","value":61553.617188},{"value":62026.078125,"date":"2021-10-18","group":"BTC"},{"date":"2021-10-19","value":64261.992188,"group":"BTC"},{"date":"2021-10-20","value":65992.835938,"group":"BTC"},{"group":"BTC","date":"2021-10-21","value":62210.171875},{"date":"2021-10-22","value":60692.265625,"group":"BTC"},{"date":"2021-10-23","group":"BTC","value":61393.617188},{"value":60930.835938,"group":"BTC","date":"2021-10-24"},{"value":63039.824219,"date":"2021-10-25","group":"BTC"},{"date":"2021-10-26","group":"BTC","value":60363.792969},{"group":"BTC","date":"2021-10-27","value":58482.386719},{"group":"BTC","date":"2021-10-28","value":60622.136719},{"date":"2021-10-29","group":"BTC","value":62227.964844},{"group":"BTC","value":61888.832031,"date":"2021-10-30"},{"date":"2021-10-31","group":"BTC","value":61318.957031},{"date":"2021-11-01","value":61004.40625,"group":"BTC"},{"date":"2021-11-02","value":63226.402344,"group":"BTC"},{"date":"2021-11-03","value":62970.046875,"group":"BTC"},{"group":"BTC","date":"2021-11-04","value":61452.230469},{"group":"BTC","date":"2021-11-05","value":61125.675781},{"date":"2021-11-06","group":"BTC","value":61527.480469},{"group":"BTC","date":"2021-11-07","value":63326.988281},{"date":"2021-11-08","group":"BTC","value":67566.828125},{"date":"2021-11-09","value":66971.828125,"group":"BTC"},{"date":"2021-11-10","group":"BTC","value":64995.230469},{"group":"BTC","value":64949.960938,"date":"2021-11-11"},{"date":"2021-11-12","value":64155.941406,"group":"BTC"},{"value":64469.527344,"group":"BTC","date":"2021-11-13"},{"date":"2021-11-14","value":65466.839844,"group":"BTC"},{"group":"BTC","value":63557.871094,"date":"2021-11-15"},{"group":"BTC","value":60161.246094,"date":"2021-11-16"},{"date":"2021-11-17","group":"BTC","value":60368.011719},{"group":"BTC","value":56942.136719,"date":"2021-11-18"},{"group":"BTC","value":58119.578125,"date":"2021-11-19"},{"group":"BTC","date":"2021-11-20","value":59697.195313},{"group":"BTC","date":"2021-11-21","value":58730.476563},{"group":"BTC","value":56289.289063,"date":"2021-11-22"},{"group":"BTC","value":57569.074219,"date":"2021-11-23"},{"date":"2021-11-24","group":"BTC","value":56280.425781},{"date":"2021-11-25","group":"BTC","value":57274.679688},{"value":53569.765625,"date":"2021-11-26","group":"BTC"},{"value":54815.078125,"date":"2021-11-27","group":"BTC"},{"group":"BTC","date":"2021-11-28","value":57248.457031},{"value":57806.566406,"group":"BTC","date":"2021-11-29"},{"group":"BTC","date":"2021-11-30","value":57005.425781},{"value":57229.828125,"date":"2021-12-01","group":"BTC"},{"group":"BTC","date":"2021-12-02","value":56477.816406},{"group":"BTC","date":"2021-12-03","value":53598.246094},{"value":49200.703125,"group":"BTC","date":"2021-12-04"},{"group":"BTC","date":"2021-12-05","value":49368.847656},{"value":50582.625,"group":"BTC","date":"2021-12-06"},{"group":"BTC","value":50700.085938,"date":"2021-12-07"},{"value":50504.796875,"group":"BTC","date":"2021-12-08"},{"date":"2021-12-09","group":"BTC","value":47672.121094},{"value":47243.304688,"group":"BTC","date":"2021-12-10"},{"value":49362.507813,"date":"2021-12-11","group":"BTC"},{"group":"BTC","value":50098.335938,"date":"2021-12-12"},{"group":"BTC","value":46737.480469,"date":"2021-12-13"},{"date":"2021-12-14","group":"BTC","value":46612.632813},{"value":48896.722656,"group":"BTC","date":"2021-12-15"},{"date":"2021-12-16","group":"BTC","value":47665.425781},{"date":"2021-12-17","group":"BTC","value":46202.144531},{"date":"2021-12-18","group":"BTC","value":46848.777344},{"date":"2021-12-19","group":"BTC","value":46707.015625},{"date":"2021-12-20","value":46880.277344,"group":"BTC"},{"date":"2021-12-21","value":48936.613281,"group":"BTC"},{"value":48628.511719,"date":"2021-12-22","group":"BTC"},{"group":"BTC","value":50784.539063,"date":"2021-12-23"},{"value":50822.195313,"group":"BTC","date":"2021-12-24"},{"group":"BTC","date":"2021-12-25","value":50429.859375},{"date":"2021-12-26","value":50809.515625,"group":"BTC"},{"date":"2021-12-27","value":50640.417969,"group":"BTC"},{"group":"BTC","date":"2021-12-28","value":47588.855469},{"value":46444.710938,"date":"2021-12-29","group":"BTC"},{"value":47178.125,"group":"BTC","date":"2021-12-30"},{"value":46306.445313,"group":"BTC","date":"2021-12-31"},{"group":"BTC","value":47686.8125,"date":"2022-01-01"},{"date":"2022-01-02","group":"BTC","value":47345.21875},{"date":"2022-01-03","value":46458.117188,"group":"BTC"},{"group":"BTC","date":"2022-01-04","value":45897.574219},{"date":"2022-01-05","group":"BTC","value":43569.003906},{"value":43160.929688,"date":"2022-01-06","group":"BTC"},{"date":"2022-01-07","value":41557.902344,"group":"BTC"},{"value":41733.941406,"group":"BTC","date":"2022-01-08"},{"date":"2022-01-09","group":"BTC","value":41911.601563},{"value":41821.261719,"group":"BTC","date":"2022-01-10"},{"group":"BTC","date":"2022-01-11","value":42735.855469},{"value":43949.101563,"date":"2022-01-12","group":"BTC"},{"value":42591.570313,"date":"2022-01-13","group":"BTC"},{"date":"2022-01-14","group":"BTC","value":43099.699219},{"group":"BTC","date":"2022-01-15","value":43177.398438},{"date":"2022-01-16","value":43113.878906,"group":"BTC"},{"date":"2022-01-17","group":"BTC","value":42250.550781},{"group":"BTC","value":42375.632813,"date":"2022-01-18"},{"date":"2022-01-19","value":41744.328125,"group":"BTC"},{"value":40680.417969,"group":"BTC","date":"2022-01-20"},{"group":"BTC","value":36457.316406,"date":"2022-01-21"},{"value":35030.25,"date":"2022-01-22","group":"BTC"},{"group":"BTC","date":"2022-01-23","value":36276.804688},{"value":36654.328125,"date":"2022-01-24","group":"BTC"},{"date":"2022-01-25","value":36954.003906,"group":"BTC"},{"value":36852.121094,"date":"2022-01-26","group":"BTC"},{"group":"BTC","value":37138.234375,"date":"2022-01-27"},{"group":"BTC","value":37784.332031,"date":"2022-01-28"},{"group":"BTC","value":38138.179688,"date":"2022-01-29"},{"value":37917.601563,"date":"2022-01-30","group":"BTC"},{"value":38483.125,"group":"BTC","date":"2022-01-31"},{"value":38743.273438,"group":"BTC","date":"2022-02-01"},{"date":"2022-02-02","value":36952.984375,"group":"BTC"},{"group":"BTC","date":"2022-02-03","value":37154.601563},{"group":"BTC","value":41500.875,"date":"2022-02-04"},{"date":"2022-02-05","value":41441.164063,"group":"BTC"},{"value":42412.433594,"group":"BTC","date":"2022-02-06"},{"date":"2022-02-07","value":43840.285156,"group":"BTC"},{"group":"BTC","value":44118.445313,"date":"2022-02-08"},{"date":"2022-02-09","value":44338.796875,"group":"BTC"},{"date":"2022-02-10","value":43565.113281,"group":"BTC"},{"group":"BTC","value":42407.9375,"date":"2022-02-11"},{"value":42244.46875,"group":"BTC","date":"2022-02-12"},{"value":42197.515625,"date":"2022-02-13","group":"BTC"},{"value":42586.917969,"group":"BTC","date":"2022-02-14"},{"date":"2022-02-15","group":"BTC","value":44575.203125},{"value":43961.859375,"group":"BTC","date":"2022-02-16"},{"date":"2022-02-17","group":"BTC","value":40538.011719},{"group":"BTC","value":40030.976563,"date":"2022-02-18"},{"group":"BTC","date":"2022-02-19","value":40122.15625},{"date":"2022-02-20","group":"BTC","value":38431.378906},{"date":"2022-02-21","value":37075.28125,"group":"BTC"},{"group":"BTC","date":"2022-02-22","value":38286.027344},{"date":"2022-02-23","group":"BTC","value":37296.570313},{"date":"2022-02-24","value":38332.609375,"group":"BTC"},{"value":39214.21875,"group":"BTC","date":"2022-02-25"},{"value":39105.148438,"group":"BTC","date":"2022-02-26"},{"date":"2022-02-27","group":"BTC","value":37709.785156},{"group":"BTC","date":"2022-02-28","value":43193.234375},{"value":44354.636719,"group":"BTC","date":"2022-03-01"},{"group":"BTC","date":"2022-03-02","value":43924.117188},{"group":"BTC","date":"2022-03-03","value":42451.789063},{"value":39137.605469,"date":"2022-03-04","group":"BTC"},{"date":"2022-03-05","group":"BTC","value":39400.585938},{"value":38419.984375,"date":"2022-03-06","group":"BTC"},{"date":"2022-03-07","value":38062.039063,"group":"BTC"},{"date":"2022-03-08","value":38737.269531,"group":"BTC"},{"value":41982.925781,"group":"BTC","date":"2022-03-09"},{"date":"2022-03-10","value":39437.460938,"group":"BTC"},{"value":38794.972656,"date":"2022-03-11","group":"BTC"},{"group":"BTC","date":"2022-03-12","value":38904.011719},{"group":"BTC","date":"2022-03-13","value":37849.664063},{"date":"2022-03-14","group":"BTC","value":39666.753906},{"value":39338.785156,"date":"2022-03-15","group":"BTC"},{"value":41143.929688,"date":"2022-03-16","group":"BTC"},{"value":40951.378906,"group":"BTC","date":"2022-03-17"},{"group":"BTC","date":"2022-03-18","value":41801.15625},{"value":42190.652344,"group":"BTC","date":"2022-03-19"},{"date":"2022-03-20","value":41247.824219,"group":"BTC"},{"group":"BTC","value":41077.996094,"date":"2022-03-21"},{"group":"BTC","value":42358.808594,"date":"2022-03-22"},{"group":"BTC","date":"2022-03-23","value":42892.957031},{"value":43960.933594,"group":"BTC","date":"2022-03-24"},{"group":"BTC","value":44348.730469,"date":"2022-03-25"},{"date":"2022-03-26","value":44500.828125,"group":"BTC"},{"value":46820.492188,"date":"2022-03-27","group":"BTC"},{"value":47128.003906,"date":"2022-03-28","group":"BTC"},{"group":"BTC","value":47465.730469,"date":"2022-03-29"},{"value":47062.664063,"group":"BTC","date":"2022-03-30"},{"value":45538.675781,"date":"2022-03-31","group":"BTC"},{"value":46281.644531,"group":"BTC","date":"2022-04-01"},{"group":"BTC","value":45868.949219,"date":"2022-04-02"},{"value":46453.566406,"date":"2022-04-03","group":"BTC"},{"group":"BTC","value":46622.675781,"date":"2022-04-04"},{"group":"BTC","value":45555.992188,"date":"2022-04-05"},{"value":43206.738281,"group":"BTC","date":"2022-04-06"},{"group":"BTC","value":43503.847656,"date":"2022-04-07"},{"group":"BTC","value":42287.664063,"date":"2022-04-08"},{"value":42782.136719,"group":"BTC","date":"2022-04-09"},{"date":"2022-04-10","group":"BTC","value":42207.671875},{"value":39521.902344,"group":"BTC","date":"2022-04-11"},{"value":40127.183594,"group":"BTC","date":"2022-04-12"},{"value":41166.730469,"group":"BTC","date":"2022-04-13"},{"group":"BTC","value":39935.515625,"date":"2022-04-14"},{"group":"BTC","value":40553.464844,"date":"2022-04-15"},{"date":"2022-04-16","group":"BTC","value":40424.484375},{"value":39716.953125,"date":"2022-04-17","group":"BTC"},{"date":"2022-04-18","group":"BTC","value":40826.214844},{"date":"2022-04-19","value":41502.75,"group":"BTC"},{"value":41374.378906,"group":"BTC","date":"2022-04-20"},{"group":"BTC","value":40527.363281,"date":"2022-04-21"},{"group":"BTC","date":"2022-04-22","value":39740.320313},{"value":39486.730469,"group":"BTC","date":"2022-04-23"},{"value":39469.292969,"date":"2022-04-24","group":"BTC"},{"group":"BTC","date":"2022-04-25","value":40458.308594},{"value":38117.460938,"group":"BTC","date":"2022-04-26"},{"value":39241.121094,"group":"BTC","date":"2022-04-27"},{"group":"BTC","date":"2022-04-28","value":39773.828125},{"value":38609.824219,"group":"BTC","date":"2022-04-29"},{"group":"BTC","date":"2022-04-30","value":37714.875},{"group":"BTC","value":38469.09375,"date":"2022-05-01"},{"date":"2022-05-02","value":38529.328125,"group":"BTC"},{"value":37750.453125,"group":"BTC","date":"2022-05-03"},{"group":"BTC","date":"2022-05-04","value":39698.371094},{"group":"BTC","date":"2022-05-05","value":36575.140625},{"date":"2022-05-06","group":"BTC","value":36040.921875},{"value":35501.953125,"group":"BTC","date":"2022-05-07"},{"group":"BTC","date":"2022-05-08","value":34059.265625},{"value":30296.953125,"date":"2022-05-09","group":"BTC"},{"value":31022.90625,"date":"2022-05-10","group":"BTC"},{"value":28936.355469,"group":"BTC","date":"2022-05-11"},{"group":"BTC","date":"2022-05-12","value":29047.751953},{"date":"2022-05-13","group":"BTC","value":29283.103516},{"value":30101.265625,"date":"2022-05-14","group":"BTC"},{"group":"BTC","date":"2022-05-15","value":31305.113281},{"group":"BTC","value":29862.917969,"date":"2022-05-16"},{"value":30425.857422,"date":"2022-05-17","group":"BTC"},{"date":"2022-05-18","group":"BTC","value":28720.271484},{"group":"BTC","date":"2022-05-19","value":30314.333984},{"date":"2022-05-20","value":29200.740234,"group":"BTC"},{"group":"BTC","date":"2022-05-21","value":29432.226563},{"group":"BTC","value":30323.722656,"date":"2022-05-22"},{"date":"2022-05-23","value":29098.910156,"group":"BTC"},{"date":"2022-05-24","value":29655.585938,"group":"BTC"},{"date":"2022-05-25","value":29562.361328,"group":"BTC"},{"group":"BTC","date":"2022-05-26","value":29267.224609},{"value":28627.574219,"date":"2022-05-27","group":"BTC"},{"value":28814.900391,"date":"2022-05-28","group":"BTC"},{"value":29445.957031,"group":"BTC","date":"2022-05-29"},{"date":"2022-05-30","value":31726.390625,"group":"BTC"},{"value":31792.310547,"date":"2022-05-31","group":"BTC"},{"group":"BTC","value":29799.080078,"date":"2022-06-01"},{"group":"BTC","date":"2022-06-02","value":30467.488281},{"group":"BTC","value":29704.390625,"date":"2022-06-03"},{"date":"2022-06-04","value":29832.914063,"group":"BTC"},{"group":"BTC","date":"2022-06-05","value":29906.662109},{"date":"2022-06-06","group":"BTC","value":31370.671875},{"group":"BTC","date":"2022-06-07","value":31155.478516},{"group":"BTC","date":"2022-06-08","value":30214.355469},{"value":30111.998047,"date":"2022-06-09","group":"BTC"},{"group":"BTC","value":29083.804688,"date":"2022-06-10"},{"value":28360.810547,"date":"2022-06-11","group":"BTC"},{"value":26762.648438,"date":"2022-06-12","group":"BTC"},{"date":"2022-06-13","value":22487.388672,"group":"BTC"},{"date":"2022-06-14","group":"BTC","value":22206.792969},{"date":"2022-06-15","group":"BTC","value":22572.839844},{"value":20381.650391,"group":"BTC","date":"2022-06-16"},{"date":"2022-06-17","group":"BTC","value":20471.482422},{"value":19017.642578,"date":"2022-06-18","group":"BTC"},{"value":20553.271484,"group":"BTC","date":"2022-06-19"},{"group":"BTC","value":20599.537109,"date":"2022-06-20"},{"group":"BTC","value":20710.597656,"date":"2022-06-21"},{"date":"2022-06-22","value":19987.029297,"group":"BTC"},{"group":"BTC","date":"2022-06-23","value":21085.876953},{"value":21231.65625,"group":"BTC","date":"2022-06-24"},{"group":"BTC","value":21502.337891,"date":"2022-06-25"},{"value":21027.294922,"date":"2022-06-26","group":"BTC"},{"group":"BTC","date":"2022-06-27","value":20735.478516},{"group":"BTC","date":"2022-06-28","value":20280.634766},{"date":"2022-06-29","value":20104.023438,"group":"BTC"},{"value":19784.726563,"group":"BTC","date":"2022-06-30"},{"group":"BTC","value":19269.367188,"date":"2022-07-01"},{"date":"2022-07-02","group":"BTC","value":19242.255859},{"group":"BTC","date":"2022-07-03","value":19297.076172},{"date":"2022-07-04","group":"BTC","value":20231.261719},{"group":"BTC","value":20190.115234,"date":"2022-07-05"},{"group":"BTC","value":20548.246094,"date":"2022-07-06"},{"group":"BTC","date":"2022-07-07","value":21637.587891},{"date":"2022-07-08","value":21731.117188,"group":"BTC"},{"date":"2022-07-09","value":21592.207031,"group":"BTC"},{"date":"2022-07-10","value":20860.449219,"group":"BTC"},{"group":"BTC","date":"2022-07-11","value":19970.556641},{"group":"BTC","value":19323.914063,"date":"2022-07-12"},{"group":"BTC","date":"2022-07-13","value":20212.074219},{"value":20569.919922,"date":"2022-07-14","group":"BTC"},{"group":"BTC","value":20836.328125,"date":"2022-07-15"},{"date":"2022-07-16","group":"BTC","value":21190.316406},{"group":"BTC","value":20779.34375,"date":"2022-07-17"},{"value":22485.689453,"group":"BTC","date":"2022-07-18"},{"date":"2022-07-19","group":"BTC","value":23389.433594},{"value":23231.732422,"group":"BTC","date":"2022-07-20"},{"date":"2022-07-21","value":23164.628906,"group":"BTC"},{"value":22714.978516,"date":"2022-07-22","group":"BTC"},{"value":22465.478516,"group":"BTC","date":"2022-07-23"},{"date":"2022-07-24","value":22609.164063,"group":"BTC"},{"group":"BTC","date":"2022-07-25","value":21361.701172},{"date":"2022-07-26","value":21239.753906,"group":"BTC"},{"group":"BTC","value":22930.548828,"date":"2022-07-27"},{"group":"BTC","date":"2022-07-28","value":23843.886719},{"date":"2022-07-29","group":"BTC","value":23804.632813},{"group":"BTC","value":23656.207031,"date":"2022-07-30"},{"date":"2022-07-31","value":23336.896484,"group":"BTC"},{"value":23314.199219,"date":"2022-08-01","group":"BTC"},{"group":"BTC","date":"2022-08-02","value":22978.117188},{"value":22846.507813,"group":"BTC","date":"2022-08-03"},{"value":22630.957031,"group":"BTC","date":"2022-08-04"},{"group":"BTC","date":"2022-08-05","value":23289.314453},{"value":22961.279297,"group":"BTC","date":"2022-08-06"},{"value":23175.890625,"group":"BTC","date":"2022-08-07"},{"value":23809.486328,"group":"BTC","date":"2022-08-08"},{"value":23164.318359,"group":"BTC","date":"2022-08-09"},{"group":"BTC","date":"2022-08-10","value":23947.642578},{"group":"BTC","value":23957.529297,"date":"2022-08-11"},{"date":"2022-08-12","value":24402.818359,"group":"BTC"},{"value":24424.068359,"date":"2022-08-13","group":"BTC"},{"date":"2022-08-14","value":24319.333984,"group":"BTC"},{"group":"BTC","date":"2022-08-15","value":24136.972656},{"value":23883.291016,"group":"BTC","date":"2022-08-16"},{"group":"BTC","date":"2022-08-17","value":23335.998047},{"group":"BTC","value":23212.738281,"date":"2022-08-18"},{"date":"2022-08-19","group":"BTC","value":20877.552734},{"value":21166.060547,"date":"2022-08-20","group":"BTC"},{"value":21534.121094,"group":"BTC","date":"2022-08-21"},{"group":"BTC","value":21398.908203,"date":"2022-08-22"},{"group":"BTC","date":"2022-08-23","value":21528.087891},{"date":"2022-08-24","group":"BTC","value":21395.019531},{"date":"2022-08-25","group":"BTC","value":21600.904297},{"group":"BTC","date":"2022-08-26","value":20260.019531},{"group":"BTC","date":"2022-08-27","value":20041.738281},{"group":"BTC","date":"2022-08-28","value":19616.814453},{"value":20297.994141,"group":"BTC","date":"2022-08-29"},{"value":19796.808594,"date":"2022-08-30","group":"BTC"},{"value":20049.763672,"group":"BTC","date":"2022-08-31"},{"value":20127.140625,"date":"2022-09-01","group":"BTC"},{"date":"2022-09-02","group":"BTC","value":19969.771484},{"group":"BTC","value":19832.087891,"date":"2022-09-03"},{"group":"BTC","value":19986.712891,"date":"2022-09-04"},{"value":19812.371094,"date":"2022-09-05","group":"BTC"},{"date":"2022-09-06","group":"BTC","value":18837.667969},{"value":19290.324219,"group":"BTC","date":"2022-09-07"},{"group":"BTC","value":19329.833984,"date":"2022-09-08"},{"value":21381.152344,"date":"2022-09-09","group":"BTC"},{"group":"BTC","date":"2022-09-10","value":21680.539063},{"group":"BTC","date":"2022-09-11","value":21769.255859},{"value":22370.449219,"group":"BTC","date":"2022-09-12"},{"group":"BTC","value":20296.707031,"date":"2022-09-13"},{"group":"BTC","value":20241.089844,"date":"2022-09-14"},{"value":19701.210938,"date":"2022-09-15","group":"BTC"},{"value":19772.583984,"group":"BTC","date":"2022-09-16"},{"date":"2022-09-17","value":20127.576172,"group":"BTC"},{"group":"BTC","date":"2022-09-18","value":19419.505859},{"group":"BTC","date":"2022-09-19","value":19544.128906},{"group":"BTC","date":"2022-09-20","value":18890.789063},{"group":"BTC","value":18547.400391,"date":"2022-09-21"},{"group":"BTC","value":19413.550781,"date":"2022-09-22"},{"value":19297.638672,"date":"2022-09-23","group":"BTC"},{"group":"BTC","value":18937.011719,"date":"2022-09-24"},{"date":"2022-09-25","group":"BTC","value":18802.097656},{"group":"BTC","value":19222.671875,"date":"2022-09-26"},{"date":"2022-09-27","value":19110.546875,"group":"BTC"},{"group":"BTC","value":19426.720703,"date":"2022-09-28"},{"group":"BTC","value":19573.050781,"date":"2022-09-29"},{"group":"BTC","value":19431.789063,"date":"2022-09-30"},{"group":"BTC","date":"2022-10-01","value":19312.095703},{"date":"2022-10-02","group":"BTC","value":19044.107422},{"date":"2022-10-03","value":19623.580078,"group":"BTC"},{"group":"BTC","date":"2022-10-04","value":20336.84375},{"group":"BTC","value":20160.716797,"date":"2022-10-05"},{"value":19955.443359,"group":"BTC","date":"2022-10-06"},{"value":19546.849609,"group":"BTC","date":"2022-10-07"},{"date":"2022-10-08","group":"BTC","value":19416.568359},{"group":"BTC","value":19446.425781,"date":"2022-10-09"},{"value":19141.484375,"group":"BTC","date":"2022-10-10"},{"group":"BTC","date":"2022-10-11","value":19051.417969},{"value":19157.445313,"group":"BTC","date":"2022-10-12"},{"date":"2022-10-13","value":19382.904297,"group":"BTC"},{"value":19185.65625,"group":"BTC","date":"2022-10-14"},{"group":"BTC","value":19067.634766,"date":"2022-10-15"},{"value":19268.09375,"date":"2022-10-16","group":"BTC"},{"group":"BTC","date":"2022-10-17","value":19550.757813},{"date":"2022-10-18","value":19334.416016,"group":"BTC"},{"group":"BTC","date":"2022-10-19","value":19139.535156},{"group":"BTC","date":"2022-10-20","value":19053.740234},{"date":"2022-10-21","group":"BTC","value":19172.46875},{"date":"2022-10-22","value":19208.189453,"group":"BTC"},{"value":19567.007813,"date":"2022-10-23","group":"BTC"},{"group":"BTC","date":"2022-10-24","value":19345.572266},{"date":"2022-10-25","group":"BTC","value":20095.857422},{"group":"BTC","date":"2022-10-26","value":20770.441406},{"value":20285.835938,"group":"BTC","date":"2022-10-27"},{"group":"BTC","date":"2022-10-28","value":20595.351563},{"date":"2022-10-29","group":"BTC","value":20818.476563},{"group":"BTC","date":"2022-10-30","value":20635.603516},{"group":"BTC","value":20495.773438,"date":"2022-10-31"},{"group":"BTC","value":20485.273438,"date":"2022-11-01"},{"value":20159.503906,"group":"BTC","date":"2022-11-02"},{"date":"2022-11-03","value":20209.988281,"group":"BTC"},{"value":21147.230469,"date":"2022-11-04","group":"BTC"},{"date":"2022-11-05","group":"BTC","value":21282.691406},{"group":"BTC","date":"2022-11-06","value":20926.486328},{"date":"2022-11-07","value":20602.816406,"group":"BTC"},{"date":"2022-11-08","value":18541.271484,"group":"BTC"},{"value":15880.780273,"group":"BTC","date":"2022-11-09"},{"date":"2022-11-10","value":17586.771484,"group":"BTC"},{"group":"BTC","date":"2022-11-11","value":17034.292969},{"group":"BTC","date":"2022-11-12","value":16799.185547},{"date":"2022-11-13","value":16353.365234,"group":"BTC"},{"value":16618.199219,"group":"BTC","date":"2022-11-14"},{"value":16884.613281,"group":"BTC","date":"2022-11-15"},{"group":"BTC","date":"2022-11-16","value":16669.439453},{"value":16687.517578,"date":"2022-11-17","group":"BTC"},{"date":"2022-11-18","group":"BTC","value":16697.777344},{"date":"2022-11-19","value":16711.546875,"group":"BTC"},{"group":"BTC","value":16291.832031,"date":"2022-11-20"},{"value":15787.28418,"group":"BTC","date":"2022-11-21"},{"group":"BTC","date":"2022-11-22","value":16189.769531},{"value":16610.707031,"date":"2022-11-23","group":"BTC"},{"value":16604.464844,"date":"2022-11-24","group":"BTC"},{"value":16521.841797,"group":"BTC","date":"2022-11-25"},{"date":"2022-11-26","group":"BTC","value":16464.28125},{"group":"BTC","value":16444.626953,"date":"2022-11-27"},{"date":"2022-11-28","value":16217.322266,"group":"BTC"},{"date":"2022-11-29","group":"BTC","value":16444.982422},{"date":"2022-11-30","value":17168.566406,"group":"BTC"},{"date":"2022-12-01","value":16967.132813,"group":"BTC"},{"value":17088.660156,"date":"2022-12-02","group":"BTC"},{"value":16908.236328,"date":"2022-12-03","group":"BTC"},{"group":"BTC","value":17130.486328,"date":"2022-12-04"},{"value":16974.826172,"group":"BTC","date":"2022-12-05"},{"date":"2022-12-06","value":17089.503906,"group":"BTC"},{"group":"BTC","date":"2022-12-07","value":16848.126953},{"value":17233.474609,"date":"2022-12-08","group":"BTC"},{"date":"2022-12-09","group":"BTC","value":17133.152344},{"value":17128.724609,"group":"BTC","date":"2022-12-10"},{"group":"BTC","date":"2022-12-11","value":17104.193359},{"value":17206.4375,"date":"2022-12-12","group":"BTC"},{"value":17781.318359,"group":"BTC","date":"2022-12-13"},{"date":"2022-12-14","group":"BTC","value":17815.650391},{"date":"2022-12-15","group":"BTC","value":17364.865234},{"date":"2022-12-16","group":"BTC","value":16647.484375},{"group":"BTC","value":16795.091797,"date":"2022-12-17"},{"date":"2022-12-18","value":16757.976563,"group":"BTC"},{"value":16439.679688,"group":"BTC","date":"2022-12-19"},{"date":"2022-12-20","value":16906.304688,"group":"BTC"},{"date":"2022-12-21","group":"BTC","value":16817.535156},{"group":"BTC","date":"2022-12-22","value":16830.341797},{"date":"2022-12-23","group":"BTC","value":16796.953125},{"value":16847.755859,"group":"BTC","date":"2022-12-24"},{"group":"BTC","date":"2022-12-25","value":16841.986328},{"value":16919.804688,"date":"2022-12-26","group":"BTC"},{"value":16717.173828,"group":"BTC","date":"2022-12-27"},{"value":16552.572266,"group":"BTC","date":"2022-12-28"},{"date":"2022-12-29","group":"BTC","value":16642.341797},{"group":"BTC","value":16602.585938,"date":"2022-12-30"},{"value":16547.496094,"date":"2022-12-31","group":"BTC"},{"group":"BTC","value":16625.080078,"date":"2023-01-01"},{"value":16688.470703,"group":"BTC","date":"2023-01-02"},{"group":"BTC","value":16679.857422,"date":"2023-01-03"},{"group":"BTC","value":16863.238281,"date":"2023-01-04"},{"value":16836.736328,"date":"2023-01-05","group":"BTC"},{"value":16951.96875,"date":"2023-01-06","group":"BTC"},{"group":"BTC","date":"2023-01-07","value":16955.078125},{"date":"2023-01-08","group":"BTC","value":17091.144531},{"value":17196.554688,"date":"2023-01-09","group":"BTC"},{"date":"2023-01-10","group":"BTC","value":17446.292969},{"value":17934.896484,"group":"BTC","date":"2023-01-11"},{"date":"2023-01-12","group":"BTC","value":18869.587891},{"value":19909.574219,"date":"2023-01-13","group":"BTC"},{"group":"BTC","value":20976.298828,"date":"2023-01-14"},{"group":"BTC","date":"2023-01-15","value":20880.798828},{"value":21169.632813,"group":"BTC","date":"2023-01-16"},{"group":"BTC","value":21161.519531,"date":"2023-01-17"},{"date":"2023-01-18","value":20688.78125,"group":"BTC"},{"group":"BTC","date":"2023-01-19","value":21086.792969},{"date":"2023-01-20","value":22676.552734,"group":"BTC"},{"date":"2023-01-21","group":"BTC","value":22777.625},{"date":"2023-01-22","value":22720.416016,"group":"BTC"},{"date":"2023-01-23","group":"BTC","value":22934.431641},{"date":"2023-01-24","group":"BTC","value":22636.46875},{"group":"BTC","value":23117.859375,"date":"2023-01-25"},{"group":"BTC","value":23032.777344,"date":"2023-01-26"},{"group":"BTC","value":23078.728516,"date":"2023-01-27"},{"value":23031.089844,"group":"BTC","date":"2023-01-28"},{"date":"2023-01-29","group":"BTC","value":23774.566406},{"group":"BTC","value":22840.138672,"date":"2023-01-30"},{"value":23139.283203,"date":"2023-01-31","group":"BTC"},{"group":"BTC","date":"2023-02-01","value":23723.769531},{"group":"BTC","date":"2023-02-02","value":23471.871094},{"group":"BTC","date":"2023-02-03","value":23449.322266},{"group":"BTC","value":23331.847656,"date":"2023-02-04"},{"date":"2023-02-05","value":22955.666016,"group":"BTC"},{"value":22760.109375,"group":"BTC","date":"2023-02-06"},{"group":"BTC","value":23264.291016,"date":"2023-02-07"},{"value":22939.398438,"date":"2023-02-08","group":"BTC"},{"date":"2023-02-09","value":22575.779297,"group":"BTC"}]
+
+data = data.map(function(d){
+  var d2 = d;
+  d2["x"] = d3.timeParse("%Y-%m-%d")(d.date);
+  if ( "value" in d ) { d2["y"] = d.value; }
+  return d2
+})
+
+var yMin = Math.min.apply(Math, data.map(function(o) { return o.y; }))
+var yMax = Math.max.apply(Math, data.map(function(o) { return o.y; }))
+
+// Add X axis --> it is a date format
+var x = d3.scaleTime()
+      .domain(d3.extent(data, function(d) { return d.x; }))
+      .range([ 0, width ]);
+
+// Y scale and Axis
+var y = d3.scaleLinear()
+    .domain([yMin, yMax])
+    .range([height, 0]);
+
+svg
+  .append('g')
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+
+svg
+  .append('g')
+  .call(d3.axisLeft(y));
+
+// group the data: I want to draw one line per group
+var sumstat = d3.group(data, d => d.group);
+
+// Add a scale for line color
+var myColor = d3.scaleOrdinal()
+    .domain(data.map(function(o) { return o.group; }))
+    .range(d3.schemeSet2);
+
+// Draw the line
+svg.selectAll(".line")
+      .data(sumstat)
+      .join("path")
+        .attr("fill", "none")
+        .attr("stroke", function(d){ return myColor(d[0]) })
+        .attr("stroke-width", 1.5)
+        .attr("d", function(d){
+          return d3.line()
+            .x(function(d) { return x(d.x); })
+            .y(function(d) { return y(+d.y); })
+            (d[1])
+        })
+
+// create a list of keys
+var keys = data.map(function(o) { return o.group; })
+keys = [...new Set(keys)];
+
+// Add one dot in the legend for each name.
+svg.selectAll("mydots")
+  .data(keys)
+  .enter()
+  .append("circle")
+    .attr("cx", width + 3*12)
+    .attr("cy", function(d,i){ return 0 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+    .attr("r", 6)
+    .style("fill", function(d){ return myColor(d)})
+
+// Add one dot in the legend for each name.
+svg.selectAll("mylabels")
+  .data(keys)
+  .enter()
+  .append("text")
+    .attr("x", width + 3*12 + 12)
+    .attr("y", function(d,i){ return 0 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+    .style("fill", function(d){ return myColor(d)})
+    .text(function(d){ return d})
+    .attr("text-anchor", "left")
+    .style("alignment-baseline", "middle")
+    .style("font-size", "12px")
+    .attr("font-family", "Courier")
+
+</script>
+</body>
+</html>
+
+
+
+
+<pre><code class="perl6">
+js-d3-date-list-plot(%ts4<ETH>, plot-label => 'ETH', width => 800, height => 400, format => 'html', div-id => 'ETH');
+</code></pre>
+
+<!DOCTYPE html>
+<head>
+    <script src="https://d3js.org/d3.v7.js"></script>
+</head>
+<body>
+
+<div id="ETH"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {"right":84,"left":40,"top":40,"bottom":40},
+    width = 800 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3
+   .select("#ETH")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .style("background", "white")
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")")
+
+// Obtain title
+var title = "ETH"
+
+if ( title.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        //.style("text-decoration", "underline")
+        .text(title);
+}
+
+// Obtain x-axis label
+var xAxisLabel = ""
+var xAxisLabelFontSize = 12
+
+if ( xAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", height + margin.bottom - xAxisLabelFontSize/2)
+        .attr("text-anchor", "middle")
+        .style("font-size", xAxisLabelFontSize.toString() + "px")
+        .text(xAxisLabel);
+}
+
+// Obtain y-axis label
+var yAxisLabel = ""
+var yAxisLabelFontSize = 12
+
+if ( yAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", - (height / 2))
+        .attr("y", 0 - margin.left + yAxisLabelFontSize)
+        .attr("text-anchor", "middle")
+        .style("font-size", yAxisLabelFontSize.toString() + "px")
+        .text(yAxisLabel);
+}
+
+// Obtain data
+var data = [{"date":"2020-01-01","group":"ETH","value":130.802002},{"value":127.410179,"group":"ETH","date":"2020-01-02"},{"group":"ETH","value":134.171707,"date":"2020-01-03"},{"date":"2020-01-04","group":"ETH","value":135.069366},{"date":"2020-01-05","group":"ETH","value":136.276779},{"value":144.304153,"group":"ETH","date":"2020-01-06"},{"value":143.543991,"group":"ETH","date":"2020-01-07"},{"date":"2020-01-08","group":"ETH","value":141.258133},{"value":138.979202,"date":"2020-01-09","group":"ETH"},{"value":143.963776,"date":"2020-01-10","group":"ETH"},{"value":142.927109,"date":"2020-01-11","group":"ETH"},{"value":145.873932,"group":"ETH","date":"2020-01-12"},{"value":144.226593,"date":"2020-01-13","group":"ETH"},{"group":"ETH","date":"2020-01-14","value":165.955353},{"date":"2020-01-15","group":"ETH","value":166.230682},{"date":"2020-01-16","value":164.391006,"group":"ETH"},{"group":"ETH","date":"2020-01-17","value":170.779953},{"group":"ETH","value":175.365677,"date":"2020-01-18"},{"date":"2020-01-19","value":166.969849,"group":"ETH"},{"date":"2020-01-20","value":167.120514,"group":"ETH"},{"date":"2020-01-21","group":"ETH","value":169.697159},{"value":168.294159,"group":"ETH","date":"2020-01-22"},{"group":"ETH","value":162.928558,"date":"2020-01-23"},{"date":"2020-01-24","value":163.051178,"group":"ETH"},{"value":161.283936,"group":"ETH","date":"2020-01-25"},{"value":168.077103,"group":"ETH","date":"2020-01-26"},{"value":170.930893,"group":"ETH","date":"2020-01-27"},{"date":"2020-01-28","group":"ETH","value":176.370316},{"value":175.050339,"group":"ETH","date":"2020-01-29"},{"date":"2020-01-30","value":184.690475,"group":"ETH"},{"date":"2020-01-31","group":"ETH","value":180.160172},{"group":"ETH","value":183.67395,"date":"2020-02-01"},{"date":"2020-02-02","group":"ETH","value":188.617538},{"value":189.865067,"date":"2020-02-03","group":"ETH"},{"group":"ETH","value":189.250595,"date":"2020-02-04"},{"value":204.23024,"date":"2020-02-05","group":"ETH"},{"value":212.339081,"date":"2020-02-06","group":"ETH"},{"date":"2020-02-07","group":"ETH","value":222.726059},{"date":"2020-02-08","value":223.146515,"group":"ETH"},{"value":228.578568,"group":"ETH","date":"2020-02-09"},{"value":223.522705,"date":"2020-02-10","group":"ETH"},{"date":"2020-02-11","value":235.851196,"group":"ETH"},{"date":"2020-02-12","value":265.406128,"group":"ETH"},{"value":268.099243,"group":"ETH","date":"2020-02-13"},{"date":"2020-02-14","group":"ETH","value":284.217499},{"date":"2020-02-15","group":"ETH","value":264.728577},{"date":"2020-02-16","group":"ETH","value":259.894714},{"date":"2020-02-17","group":"ETH","value":266.363434},{"group":"ETH","value":281.94458,"date":"2020-02-18"},{"date":"2020-02-19","value":259.763977,"group":"ETH"},{"group":"ETH","date":"2020-02-20","value":257.949463},{"group":"ETH","date":"2020-02-21","value":265.600616},{"date":"2020-02-22","group":"ETH","value":262.331726},{"value":273.75415,"group":"ETH","date":"2020-02-23"},{"group":"ETH","date":"2020-02-24","value":265.216431},{"value":247.817596,"group":"ETH","date":"2020-02-25"},{"group":"ETH","value":225.680267,"date":"2020-02-26"},{"group":"ETH","value":226.753387,"date":"2020-02-27"},{"date":"2020-02-28","group":"ETH","value":226.760498},{"value":219.848511,"group":"ETH","date":"2020-02-29"},{"value":218.970596,"date":"2020-03-01","group":"ETH"},{"group":"ETH","value":230.569778,"date":"2020-03-02"},{"value":224.47963,"date":"2020-03-03","group":"ETH"},{"group":"ETH","date":"2020-03-04","value":224.517975},{"value":229.268188,"group":"ETH","date":"2020-03-05"},{"group":"ETH","value":243.525299,"date":"2020-03-06"},{"group":"ETH","date":"2020-03-07","value":237.853088},{"value":200.689056,"date":"2020-03-08","group":"ETH"},{"value":201.986328,"group":"ETH","date":"2020-03-09"},{"group":"ETH","date":"2020-03-10","value":200.767242},{"group":"ETH","value":194.86853,"date":"2020-03-11"},{"group":"ETH","value":112.347122,"date":"2020-03-12"},{"value":133.201813,"date":"2020-03-13","group":"ETH"},{"group":"ETH","date":"2020-03-14","value":123.306023},{"date":"2020-03-15","value":125.214302,"group":"ETH"},{"date":"2020-03-16","group":"ETH","value":110.605873},{"value":113.942749,"group":"ETH","date":"2020-03-17"},{"group":"ETH","date":"2020-03-18","value":114.84227},{"date":"2020-03-19","group":"ETH","value":136.593857},{"date":"2020-03-20","group":"ETH","value":132.737167},{"date":"2020-03-21","value":132.81871,"group":"ETH"},{"value":123.321152,"date":"2020-03-22","group":"ETH"},{"value":134.911606,"group":"ETH","date":"2020-03-23"},{"group":"ETH","value":138.761444,"date":"2020-03-24"},{"value":136.195892,"date":"2020-03-25","group":"ETH"},{"group":"ETH","date":"2020-03-26","value":138.361557},{"group":"ETH","date":"2020-03-27","value":133.937943},{"group":"ETH","value":130.986496,"date":"2020-03-28"},{"group":"ETH","value":125.583733,"date":"2020-03-29"},{"group":"ETH","date":"2020-03-30","value":132.904541},{"date":"2020-03-31","value":133.593567,"group":"ETH"},{"group":"ETH","value":135.634552,"date":"2020-04-01"},{"date":"2020-04-02","group":"ETH","value":142.029144},{"group":"ETH","value":142.091309,"date":"2020-04-03"},{"date":"2020-04-04","value":145.219391,"group":"ETH"},{"group":"ETH","date":"2020-04-05","value":143.546646},{"group":"ETH","value":169.13588,"date":"2020-04-06"},{"group":"ETH","date":"2020-04-07","value":165.101944},{"group":"ETH","date":"2020-04-08","value":172.641739},{"group":"ETH","value":170.807144,"date":"2020-04-09"},{"value":158.412445,"group":"ETH","date":"2020-04-10"},{"group":"ETH","value":158.216019,"date":"2020-04-11"},{"group":"ETH","date":"2020-04-12","value":161.142426},{"group":"ETH","value":156.279556,"date":"2020-04-13"},{"value":157.59639,"date":"2020-04-14","group":"ETH"},{"group":"ETH","value":153.286896,"date":"2020-04-15"},{"date":"2020-04-16","group":"ETH","value":172.157379},{"group":"ETH","date":"2020-04-17","value":171.63858},{"date":"2020-04-18","value":186.914001,"group":"ETH"},{"group":"ETH","date":"2020-04-19","value":181.61496},{"value":172.297165,"group":"ETH","date":"2020-04-20"},{"group":"ETH","date":"2020-04-21","value":172.737701},{"group":"ETH","date":"2020-04-22","value":182.599579},{"date":"2020-04-23","group":"ETH","value":185.028671},{"value":189.236938,"group":"ETH","date":"2020-04-24"},{"group":"ETH","value":195.515305,"date":"2020-04-25"},{"date":"2020-04-26","group":"ETH","value":197.317535},{"date":"2020-04-27","value":197.224716,"group":"ETH"},{"date":"2020-04-28","value":198.41539,"group":"ETH"},{"date":"2020-04-29","value":216.968231,"group":"ETH"},{"date":"2020-04-30","group":"ETH","value":207.602051},{"value":214.219101,"group":"ETH","date":"2020-05-01"},{"group":"ETH","value":215.325378,"date":"2020-05-02"},{"value":210.933151,"group":"ETH","date":"2020-05-03"},{"group":"ETH","value":208.174011,"date":"2020-05-04"},{"value":206.774399,"date":"2020-05-05","group":"ETH"},{"date":"2020-05-06","value":204.055786,"group":"ETH"},{"group":"ETH","date":"2020-05-07","value":212.289413},{"group":"ETH","date":"2020-05-08","value":212.991577},{"date":"2020-05-09","group":"ETH","value":211.600128},{"date":"2020-05-10","value":188.599564,"group":"ETH"},{"date":"2020-05-11","group":"ETH","value":185.912842},{"group":"ETH","value":189.3125,"date":"2020-05-12"},{"value":199.193283,"group":"ETH","date":"2020-05-13"},{"value":202.949097,"group":"ETH","date":"2020-05-14"},{"date":"2020-05-15","group":"ETH","value":195.622665},{"group":"ETH","date":"2020-05-16","value":200.677124},{"group":"ETH","value":207.158691,"date":"2020-05-17"},{"date":"2020-05-18","value":214.525055,"group":"ETH"},{"group":"ETH","value":213.451111,"date":"2020-05-19"},{"group":"ETH","value":210.096741,"date":"2020-05-20"},{"value":199.883606,"date":"2020-05-21","group":"ETH"},{"group":"ETH","date":"2020-05-22","value":207.169189},{"date":"2020-05-23","value":208.694397,"group":"ETH"},{"group":"ETH","date":"2020-05-24","value":202.370346},{"value":205.319748,"group":"ETH","date":"2020-05-25"},{"value":201.902313,"group":"ETH","date":"2020-05-26"},{"group":"ETH","date":"2020-05-27","value":208.863434},{"value":219.840424,"date":"2020-05-28","group":"ETH"},{"value":220.675125,"group":"ETH","date":"2020-05-29"},{"value":242.345596,"date":"2020-05-30","group":"ETH"},{"group":"ETH","value":230.975708,"date":"2020-05-31"},{"date":"2020-06-01","group":"ETH","value":246.99176},{"value":237.219055,"date":"2020-06-02","group":"ETH"},{"value":244.179321,"date":"2020-06-03","group":"ETH"},{"group":"ETH","value":244.426392,"date":"2020-06-04"},{"group":"ETH","date":"2020-06-05","value":241.221985},{"date":"2020-06-06","group":"ETH","value":241.93132},{"date":"2020-06-07","group":"ETH","value":245.167252},{"date":"2020-06-08","value":246.309906,"group":"ETH"},{"value":244.911453,"group":"ETH","date":"2020-06-09"},{"group":"ETH","value":247.444946,"date":"2020-06-10"},{"group":"ETH","date":"2020-06-11","value":231.702667},{"value":237.49321,"group":"ETH","date":"2020-06-12"},{"date":"2020-06-13","group":"ETH","value":238.908844},{"date":"2020-06-14","value":234.1147,"group":"ETH"},{"group":"ETH","value":229.928909,"date":"2020-06-15"},{"date":"2020-06-16","group":"ETH","value":234.416168},{"value":233.028275,"group":"ETH","date":"2020-06-17"},{"group":"ETH","value":232.101166,"date":"2020-06-18"},{"group":"ETH","value":227.13829,"date":"2020-06-19"},{"date":"2020-06-20","group":"ETH","value":229.274261},{"group":"ETH","date":"2020-06-21","value":228.989822},{"value":242.533188,"group":"ETH","date":"2020-06-22"},{"value":244.142151,"group":"ETH","date":"2020-06-23"},{"date":"2020-06-24","value":235.772461,"group":"ETH"},{"group":"ETH","date":"2020-06-25","value":232.944489},{"value":229.668045,"date":"2020-06-26","group":"ETH"},{"value":222.959793,"date":"2020-06-27","group":"ETH"},{"value":225.347168,"date":"2020-06-28","group":"ETH"},{"value":228.19487,"date":"2020-06-29","group":"ETH"},{"group":"ETH","date":"2020-06-30","value":226.315002},{"group":"ETH","date":"2020-07-01","value":231.113419},{"value":229.392197,"date":"2020-07-02","group":"ETH"},{"group":"ETH","value":225.38707,"date":"2020-07-03"},{"value":229.074112,"group":"ETH","date":"2020-07-04"},{"group":"ETH","value":227.664597,"date":"2020-07-05"},{"date":"2020-07-06","group":"ETH","value":241.510223},{"value":239.075531,"date":"2020-07-07","group":"ETH"},{"date":"2020-07-08","group":"ETH","value":246.670013},{"date":"2020-07-09","group":"ETH","value":243.015961},{"value":240.984985,"date":"2020-07-10","group":"ETH"},{"value":239.458176,"group":"ETH","date":"2020-07-11"},{"date":"2020-07-12","group":"ETH","value":242.131699},{"date":"2020-07-13","group":"ETH","value":239.604584},{"date":"2020-07-14","group":"ETH","value":240.211487},{"group":"ETH","date":"2020-07-15","value":238.423523},{"date":"2020-07-16","group":"ETH","value":233.640884},{"value":232.773087,"group":"ETH","date":"2020-07-17"},{"group":"ETH","date":"2020-07-18","value":235.48381},{"group":"ETH","date":"2020-07-19","value":238.487518},{"group":"ETH","date":"2020-07-20","value":236.153168},{"date":"2020-07-21","value":245.016724,"group":"ETH"},{"group":"ETH","date":"2020-07-22","value":262.190643},{"value":274.689056,"group":"ETH","date":"2020-07-23"},{"group":"ETH","value":279.215424,"date":"2020-07-24"},{"value":304.056763,"date":"2020-07-25","group":"ETH"},{"date":"2020-07-26","value":309.643616,"group":"ETH"},{"group":"ETH","value":321.514099,"date":"2020-07-27"},{"date":"2020-07-28","value":316.657257,"group":"ETH"},{"date":"2020-07-29","group":"ETH","value":318.190887},{"value":334.586639,"group":"ETH","date":"2020-07-30"},{"value":345.554657,"group":"ETH","date":"2020-07-31"},{"value":385.199707,"group":"ETH","date":"2020-08-01"},{"value":370.671722,"group":"ETH","date":"2020-08-02"},{"group":"ETH","date":"2020-08-03","value":386.295166},{"value":389.875488,"group":"ETH","date":"2020-08-04"},{"value":401.590576,"group":"ETH","date":"2020-08-05"},{"date":"2020-08-06","value":394.961945,"group":"ETH"},{"group":"ETH","date":"2020-08-07","value":379.512848},{"group":"ETH","date":"2020-08-08","value":393.987366},{"group":"ETH","date":"2020-08-09","value":391.120453},{"group":"ETH","date":"2020-08-10","value":395.887573},{"group":"ETH","date":"2020-08-11","value":380.384064},{"group":"ETH","date":"2020-08-12","value":391.02417},{"group":"ETH","date":"2020-08-13","value":428.741791},{"date":"2020-08-14","value":437.397827,"group":"ETH"},{"group":"ETH","value":433.354919,"date":"2020-08-15"},{"group":"ETH","date":"2020-08-16","value":433.786621},{"group":"ETH","value":429.53125,"date":"2020-08-17"},{"date":"2020-08-18","group":"ETH","value":423.669312},{"group":"ETH","date":"2020-08-19","value":406.463776},{"date":"2020-08-20","value":416.439789,"group":"ETH"},{"group":"ETH","value":389.126343,"date":"2020-08-21"},{"group":"ETH","value":395.835144,"date":"2020-08-22"},{"group":"ETH","value":391.384491,"date":"2020-08-23"},{"date":"2020-08-24","value":408.144196,"group":"ETH"},{"value":384.001038,"date":"2020-08-25","group":"ETH"},{"value":386.466125,"group":"ETH","date":"2020-08-26"},{"group":"ETH","date":"2020-08-27","value":382.632629},{"value":395.874664,"group":"ETH","date":"2020-08-28"},{"date":"2020-08-29","value":399.921478,"group":"ETH"},{"date":"2020-08-30","value":428.395721,"group":"ETH"},{"value":435.079742,"group":"ETH","date":"2020-08-31"},{"group":"ETH","value":477.05191,"date":"2020-09-01"},{"group":"ETH","date":"2020-09-02","value":440.040497},{"value":385.671936,"date":"2020-09-03","group":"ETH"},{"date":"2020-09-04","group":"ETH","value":388.24115},{"value":335.260071,"group":"ETH","date":"2020-09-05"},{"date":"2020-09-06","group":"ETH","value":353.362274},{"value":352.673492,"date":"2020-09-07","group":"ETH"},{"date":"2020-09-08","value":337.602112,"group":"ETH"},{"date":"2020-09-09","group":"ETH","value":351.110016},{"date":"2020-09-10","value":368.101898,"group":"ETH"},{"value":374.695587,"group":"ETH","date":"2020-09-11"},{"value":387.183105,"group":"ETH","date":"2020-09-12"},{"group":"ETH","date":"2020-09-13","value":365.570007},{"value":377.26886,"group":"ETH","date":"2020-09-14"},{"value":364.839203,"group":"ETH","date":"2020-09-15"},{"value":365.812286,"date":"2020-09-16","group":"ETH"},{"date":"2020-09-17","value":389.019226,"group":"ETH"},{"group":"ETH","date":"2020-09-18","value":384.364532},{"value":385.544373,"date":"2020-09-19","group":"ETH"},{"group":"ETH","date":"2020-09-20","value":371.052826},{"group":"ETH","value":341.786072,"date":"2020-09-21"},{"value":344.503174,"date":"2020-09-22","group":"ETH"},{"date":"2020-09-23","value":321.116302,"group":"ETH"},{"date":"2020-09-24","group":"ETH","value":349.355591},{"group":"ETH","date":"2020-09-25","value":352.183258},{"date":"2020-09-26","value":355.488098,"group":"ETH"},{"value":357.438507,"group":"ETH","date":"2020-09-27"},{"group":"ETH","value":355.159424,"date":"2020-09-28"},{"date":"2020-09-29","group":"ETH","value":359.757385},{"group":"ETH","date":"2020-09-30","value":359.937866},{"date":"2020-10-01","group":"ETH","value":353.205902},{"date":"2020-10-02","group":"ETH","value":346.238922},{"group":"ETH","date":"2020-10-03","value":346.522095},{"value":352.57901,"group":"ETH","date":"2020-10-04"},{"group":"ETH","value":353.956787,"date":"2020-10-05"},{"group":"ETH","date":"2020-10-06","value":340.815857},{"date":"2020-10-07","group":"ETH","value":341.808655},{"date":"2020-10-08","value":350.766144,"group":"ETH"},{"value":365.590485,"date":"2020-10-09","group":"ETH"},{"group":"ETH","value":370.96759,"date":"2020-10-10"},{"date":"2020-10-11","group":"ETH","value":375.142059},{"group":"ETH","value":387.731262,"date":"2020-10-12"},{"group":"ETH","value":381.190765,"date":"2020-10-13"},{"group":"ETH","date":"2020-10-14","value":379.484039},{"value":377.441833,"group":"ETH","date":"2020-10-15"},{"group":"ETH","value":366.229004,"date":"2020-10-16"},{"date":"2020-10-17","value":368.855927,"group":"ETH"},{"group":"ETH","date":"2020-10-18","value":378.213684},{"value":379.935608,"group":"ETH","date":"2020-10-19"},{"value":369.136902,"date":"2020-10-20","group":"ETH"},{"value":392.189972,"group":"ETH","date":"2020-10-21"},{"date":"2020-10-22","group":"ETH","value":413.77298},{"value":409.766693,"group":"ETH","date":"2020-10-23"},{"group":"ETH","value":412.457611,"date":"2020-10-24"},{"date":"2020-10-25","value":406.217773,"group":"ETH"},{"value":393.888306,"group":"ETH","date":"2020-10-26"},{"date":"2020-10-27","group":"ETH","value":403.99704},{"date":"2020-10-28","group":"ETH","value":388.650757},{"group":"ETH","value":386.730103,"date":"2020-10-29"},{"value":382.819977,"date":"2020-10-30","group":"ETH"},{"value":386.590332,"group":"ETH","date":"2020-10-31"},{"date":"2020-11-01","value":396.358185,"group":"ETH"},{"date":"2020-11-02","group":"ETH","value":383.156738},{"value":387.602173,"date":"2020-11-03","group":"ETH"},{"value":402.141998,"date":"2020-11-04","group":"ETH"},{"value":414.067352,"group":"ETH","date":"2020-11-05"},{"date":"2020-11-06","group":"ETH","value":454.719299},{"group":"ETH","value":435.713135,"date":"2020-11-07"},{"value":453.554779,"group":"ETH","date":"2020-11-08"},{"date":"2020-11-09","group":"ETH","value":444.163055},{"group":"ETH","value":449.679626,"date":"2020-11-10"},{"group":"ETH","value":462.960541,"date":"2020-11-11"},{"value":461.00528,"group":"ETH","date":"2020-11-12"},{"date":"2020-11-13","value":474.626434,"group":"ETH"},{"group":"ETH","date":"2020-11-14","value":460.149841},{"value":447.559082,"date":"2020-11-15","group":"ETH"},{"value":459.940308,"group":"ETH","date":"2020-11-16"},{"date":"2020-11-17","value":480.360077,"group":"ETH"},{"group":"ETH","value":479.48407,"date":"2020-11-18"},{"value":471.630432,"date":"2020-11-19","group":"ETH"},{"date":"2020-11-20","value":509.744568,"group":"ETH"},{"value":549.486633,"date":"2020-11-21","group":"ETH"},{"value":558.068115,"date":"2020-11-22","group":"ETH"},{"date":"2020-11-23","value":608.454041,"group":"ETH"},{"date":"2020-11-24","group":"ETH","value":603.897766},{"group":"ETH","date":"2020-11-25","value":570.686646},{"date":"2020-11-26","value":518.801147,"group":"ETH"},{"value":517.493713,"date":"2020-11-27","group":"ETH"},{"group":"ETH","value":538.229797,"date":"2020-11-28"},{"value":575.758057,"group":"ETH","date":"2020-11-29"},{"date":"2020-11-30","value":614.842529,"group":"ETH"},{"group":"ETH","date":"2020-12-01","value":587.324158},{"date":"2020-12-02","group":"ETH","value":598.352356},{"group":"ETH","value":616.70874,"date":"2020-12-03"},{"date":"2020-12-04","value":569.354187,"group":"ETH"},{"date":"2020-12-05","value":596.595459,"group":"ETH"},{"group":"ETH","date":"2020-12-06","value":601.908997},{"value":591.843384,"group":"ETH","date":"2020-12-07"},{"date":"2020-12-08","group":"ETH","value":554.827759},{"group":"ETH","value":573.479126,"date":"2020-12-09"},{"date":"2020-12-10","value":559.678528,"group":"ETH"},{"date":"2020-12-11","value":545.797363,"group":"ETH"},{"group":"ETH","value":568.567322,"date":"2020-12-12"},{"date":"2020-12-13","group":"ETH","value":589.663208},{"group":"ETH","date":"2020-12-14","value":586.011169},{"date":"2020-12-15","group":"ETH","value":589.355591},{"value":636.181824,"date":"2020-12-16","group":"ETH"},{"value":642.868958,"date":"2020-12-17","group":"ETH"},{"group":"ETH","value":654.811951,"date":"2020-12-18"},{"group":"ETH","date":"2020-12-19","value":659.297913},{"date":"2020-12-20","value":638.290833,"group":"ETH"},{"group":"ETH","value":609.817871,"date":"2020-12-21"},{"value":634.854187,"group":"ETH","date":"2020-12-22"},{"date":"2020-12-23","group":"ETH","value":583.7146},{"date":"2020-12-24","value":611.607178,"group":"ETH"},{"date":"2020-12-25","group":"ETH","value":626.410706},{"group":"ETH","value":635.835815,"date":"2020-12-26"},{"date":"2020-12-27","group":"ETH","value":682.642334},{"value":730.397339,"date":"2020-12-28","group":"ETH"},{"value":731.520142,"date":"2020-12-29","group":"ETH"},{"date":"2020-12-30","value":751.618958,"group":"ETH"},{"value":737.803406,"date":"2020-12-31","group":"ETH"},{"group":"ETH","date":"2021-01-01","value":730.367554},{"group":"ETH","value":774.534973,"date":"2021-01-02"},{"group":"ETH","date":"2021-01-03","value":975.50769},{"date":"2021-01-04","group":"ETH","value":1040.233032},{"date":"2021-01-05","group":"ETH","value":1100.006104},{"group":"ETH","date":"2021-01-06","value":1207.112183},{"value":1225.678101,"group":"ETH","date":"2021-01-07"},{"date":"2021-01-08","value":1224.197144,"group":"ETH"},{"group":"ETH","date":"2021-01-09","value":1281.077271},{"group":"ETH","value":1262.246704,"date":"2021-01-10"},{"group":"ETH","value":1090.145386,"date":"2021-01-11"},{"value":1043.43457,"date":"2021-01-12","group":"ETH"},{"date":"2021-01-13","value":1130.73938,"group":"ETH"},{"date":"2021-01-14","group":"ETH","value":1218.453003},{"value":1171.834595,"group":"ETH","date":"2021-01-15"},{"date":"2021-01-16","value":1233.537598,"group":"ETH"},{"date":"2021-01-17","value":1230.172241,"group":"ETH"},{"group":"ETH","date":"2021-01-18","value":1257.279541},{"group":"ETH","value":1377.295898,"date":"2021-01-19"},{"value":1382.274048,"date":"2021-01-20","group":"ETH"},{"date":"2021-01-21","value":1121.570923,"group":"ETH"},{"value":1236.512207,"group":"ETH","date":"2021-01-22"},{"value":1230.990601,"date":"2021-01-23","group":"ETH"},{"value":1391.609375,"group":"ETH","date":"2021-01-24"},{"value":1324.414795,"group":"ETH","date":"2021-01-25"},{"date":"2021-01-26","group":"ETH","value":1357.058105},{"value":1253.187134,"date":"2021-01-27","group":"ETH"},{"date":"2021-01-28","group":"ETH","value":1332.492188},{"group":"ETH","value":1382.522827,"date":"2021-01-29"},{"value":1376.115479,"date":"2021-01-30","group":"ETH"},{"date":"2021-01-31","group":"ETH","value":1314.986206},{"value":1369.040527,"date":"2021-02-01","group":"ETH"},{"date":"2021-02-02","value":1515.193726,"group":"ETH"},{"group":"ETH","date":"2021-02-03","value":1660.909546},{"date":"2021-02-04","value":1594.762695,"group":"ETH"},{"date":"2021-02-05","group":"ETH","value":1718.650879},{"value":1677.846802,"date":"2021-02-06","group":"ETH"},{"date":"2021-02-07","group":"ETH","value":1614.227783},{"group":"ETH","date":"2021-02-08","value":1746.616821},{"group":"ETH","date":"2021-02-09","value":1768.035034},{"group":"ETH","date":"2021-02-10","value":1744.243408},{"date":"2021-02-11","group":"ETH","value":1783.797974},{"group":"ETH","date":"2021-02-12","value":1843.532593},{"value":1814.109863,"group":"ETH","date":"2021-02-13"},{"value":1805.084106,"date":"2021-02-14","group":"ETH"},{"date":"2021-02-15","value":1779.791016,"group":"ETH"},{"group":"ETH","date":"2021-02-16","value":1781.067505},{"value":1848.458252,"date":"2021-02-17","group":"ETH"},{"group":"ETH","date":"2021-02-18","value":1937.449219},{"value":1960.164795,"group":"ETH","date":"2021-02-19"},{"group":"ETH","value":1919.534058,"date":"2021-02-20"},{"date":"2021-02-21","group":"ETH","value":1935.601074},{"group":"ETH","date":"2021-02-22","value":1781.99292},{"group":"ETH","date":"2021-02-23","value":1570.203979},{"date":"2021-02-24","group":"ETH","value":1626.575684},{"date":"2021-02-25","group":"ETH","value":1475.703735},{"value":1446.033691,"group":"ETH","date":"2021-02-26"},{"value":1459.973145,"date":"2021-02-27","group":"ETH"},{"date":"2021-02-28","group":"ETH","value":1416.04895},{"value":1564.707642,"group":"ETH","date":"2021-03-01"},{"date":"2021-03-02","value":1492.608765,"group":"ETH"},{"group":"ETH","value":1575.853149,"date":"2021-03-03"},{"value":1541.914307,"group":"ETH","date":"2021-03-04"},{"group":"ETH","value":1533.275024,"date":"2021-03-05"},{"date":"2021-03-06","group":"ETH","value":1654.741577},{"value":1723.153809,"date":"2021-03-07","group":"ETH"},{"value":1834.727905,"group":"ETH","date":"2021-03-08"},{"value":1868.048828,"group":"ETH","date":"2021-03-09"},{"group":"ETH","date":"2021-03-10","value":1799.16626},{"group":"ETH","date":"2021-03-11","value":1826.194946},{"group":"ETH","value":1772.102417,"date":"2021-03-12"},{"value":1924.685425,"group":"ETH","date":"2021-03-13"},{"group":"ETH","value":1854.564331,"date":"2021-03-14"},{"date":"2021-03-15","value":1791.702271,"group":"ETH"},{"date":"2021-03-16","group":"ETH","value":1806.971802},{"value":1823.449341,"group":"ETH","date":"2021-03-17"},{"group":"ETH","date":"2021-03-18","value":1782.855103},{"date":"2021-03-19","value":1817.624146,"group":"ETH"},{"date":"2021-03-20","value":1812.634644,"group":"ETH"},{"date":"2021-03-21","value":1788.217041,"group":"ETH"},{"date":"2021-03-22","group":"ETH","value":1691.333984},{"group":"ETH","value":1678.650146,"date":"2021-03-23"},{"group":"ETH","value":1593.413452,"date":"2021-03-24"},{"value":1595.359253,"date":"2021-03-25","group":"ETH"},{"group":"ETH","value":1702.842041,"date":"2021-03-26"},{"value":1716.494629,"date":"2021-03-27","group":"ETH"},{"group":"ETH","value":1691.355957,"date":"2021-03-28"},{"value":1819.684937,"date":"2021-03-29","group":"ETH"},{"group":"ETH","date":"2021-03-30","value":1846.033691},{"date":"2021-03-31","value":1918.362061,"group":"ETH"},{"value":1977.276855,"date":"2021-04-01","group":"ETH"},{"date":"2021-04-02","value":2143.225586,"group":"ETH"},{"group":"ETH","date":"2021-04-03","value":2028.422485},{"date":"2021-04-04","value":2093.122803,"group":"ETH"},{"date":"2021-04-05","group":"ETH","value":2107.887207},{"group":"ETH","value":2118.378906,"date":"2021-04-06"},{"group":"ETH","value":1971.077271,"date":"2021-04-07"},{"value":2088.57373,"date":"2021-04-08","group":"ETH"},{"group":"ETH","value":2072.108887,"date":"2021-04-09"},{"group":"ETH","value":2135.942139,"date":"2021-04-10"},{"value":2157.656982,"date":"2021-04-11","group":"ETH"},{"date":"2021-04-12","group":"ETH","value":2139.353271},{"value":2299.187744,"group":"ETH","date":"2021-04-13"},{"value":2435.10498,"date":"2021-04-14","group":"ETH"},{"value":2519.116211,"group":"ETH","date":"2021-04-15"},{"value":2431.946533,"group":"ETH","date":"2021-04-16"},{"value":2344.89502,"group":"ETH","date":"2021-04-17"},{"group":"ETH","value":2237.136963,"date":"2021-04-18"},{"value":2166.188721,"group":"ETH","date":"2021-04-19"},{"value":2330.210938,"date":"2021-04-20","group":"ETH"},{"date":"2021-04-21","group":"ETH","value":2364.751709},{"value":2403.535156,"date":"2021-04-22","group":"ETH"},{"date":"2021-04-23","group":"ETH","value":2363.586182},{"date":"2021-04-24","group":"ETH","value":2211.625732},{"date":"2021-04-25","value":2316.05957,"group":"ETH"},{"group":"ETH","value":2534.481689,"date":"2021-04-26"},{"value":2662.865234,"date":"2021-04-27","group":"ETH"},{"value":2746.380127,"group":"ETH","date":"2021-04-28"},{"date":"2021-04-29","group":"ETH","value":2756.876953},{"date":"2021-04-30","group":"ETH","value":2773.207031},{"date":"2021-05-01","value":2945.892822,"group":"ETH"},{"group":"ETH","value":2952.056152,"date":"2021-05-02"},{"group":"ETH","value":3431.086182,"date":"2021-05-03"},{"group":"ETH","date":"2021-05-04","value":3253.629395},{"date":"2021-05-05","value":3522.783203,"group":"ETH"},{"group":"ETH","value":3490.880371,"date":"2021-05-06"},{"group":"ETH","value":3484.729004,"date":"2021-05-07"},{"value":3902.647705,"date":"2021-05-08","group":"ETH"},{"value":3928.844727,"date":"2021-05-09","group":"ETH"},{"group":"ETH","date":"2021-05-10","value":3952.293945},{"value":4168.701172,"date":"2021-05-11","group":"ETH"},{"group":"ETH","value":3785.848633,"date":"2021-05-12"},{"value":3715.148438,"group":"ETH","date":"2021-05-13"},{"value":4079.057373,"date":"2021-05-14","group":"ETH"},{"group":"ETH","date":"2021-05-15","value":3638.12207},{"value":3587.506104,"date":"2021-05-16","group":"ETH"},{"date":"2021-05-17","group":"ETH","value":3282.397705},{"group":"ETH","value":3380.070068,"date":"2021-05-18"},{"group":"ETH","value":2460.679199,"date":"2021-05-19"},{"value":2784.294189,"group":"ETH","date":"2021-05-20"},{"group":"ETH","date":"2021-05-21","value":2430.621338},{"group":"ETH","date":"2021-05-22","value":2295.705566},{"date":"2021-05-23","group":"ETH","value":2109.579834},{"group":"ETH","date":"2021-05-24","value":2643.591064},{"value":2706.628906,"date":"2021-05-25","group":"ETH"},{"group":"ETH","value":2888.69873,"date":"2021-05-26"},{"group":"ETH","value":2736.488525,"date":"2021-05-27"},{"value":2419.90625,"date":"2021-05-28","group":"ETH"},{"value":2279.51416,"date":"2021-05-29","group":"ETH"},{"group":"ETH","date":"2021-05-30","value":2390.30542},{"group":"ETH","value":2714.945313,"date":"2021-05-31"},{"group":"ETH","value":2633.518311,"date":"2021-06-01"},{"value":2706.125,"date":"2021-06-02","group":"ETH"},{"value":2855.126465,"date":"2021-06-03","group":"ETH"},{"value":2688.195068,"group":"ETH","date":"2021-06-04"},{"group":"ETH","value":2630.576904,"date":"2021-06-05"},{"group":"ETH","value":2715.092773,"date":"2021-06-06"},{"value":2590.263184,"date":"2021-06-07","group":"ETH"},{"group":"ETH","date":"2021-06-08","value":2517.438721},{"date":"2021-06-09","value":2608.26709,"group":"ETH"},{"group":"ETH","value":2471.518555,"date":"2021-06-10"},{"date":"2021-06-11","value":2353.768799,"group":"ETH"},{"value":2372.484375,"date":"2021-06-12","group":"ETH"},{"group":"ETH","value":2508.391602,"date":"2021-06-13"},{"value":2537.891113,"date":"2021-06-14","group":"ETH"},{"date":"2021-06-15","group":"ETH","value":2610.936768},{"value":2367.663574,"group":"ETH","date":"2021-06-16"},{"group":"ETH","date":"2021-06-17","value":2372.001953},{"value":2231.733154,"group":"ETH","date":"2021-06-18"},{"value":2178.499023,"date":"2021-06-19","group":"ETH"},{"group":"ETH","value":2246.364502,"date":"2021-06-20"},{"value":1888.44751,"group":"ETH","date":"2021-06-21"},{"date":"2021-06-22","value":1874.950073,"group":"ETH"},{"date":"2021-06-23","group":"ETH","value":1989.736328},{"date":"2021-06-24","value":1988.456299,"group":"ETH"},{"value":1813.217285,"group":"ETH","date":"2021-06-25"},{"value":1829.239258,"date":"2021-06-26","group":"ETH"},{"value":1978.894653,"date":"2021-06-27","group":"ETH"},{"value":2079.657471,"group":"ETH","date":"2021-06-28"},{"group":"ETH","date":"2021-06-29","value":2160.768311},{"value":2274.547607,"group":"ETH","date":"2021-06-30"},{"group":"ETH","date":"2021-07-01","value":2113.605469},{"value":2150.040283,"date":"2021-07-02","group":"ETH"},{"value":2226.114258,"date":"2021-07-03","group":"ETH"},{"group":"ETH","value":2321.724121,"date":"2021-07-04"},{"value":2198.58252,"date":"2021-07-05","group":"ETH"},{"date":"2021-07-06","value":2324.679443,"group":"ETH"},{"date":"2021-07-07","value":2315.161865,"group":"ETH"},{"date":"2021-07-08","value":2120.026367,"group":"ETH"},{"value":2146.692383,"group":"ETH","date":"2021-07-09"},{"date":"2021-07-10","group":"ETH","value":2111.403564},{"group":"ETH","value":2139.664795,"date":"2021-07-11"},{"group":"ETH","value":2036.721069,"date":"2021-07-12"},{"group":"ETH","date":"2021-07-13","value":1940.083984},{"date":"2021-07-14","value":1994.331299,"group":"ETH"},{"value":1911.175659,"date":"2021-07-15","group":"ETH"},{"value":1880.382935,"group":"ETH","date":"2021-07-16"},{"date":"2021-07-17","group":"ETH","value":1898.825195},{"value":1895.552124,"date":"2021-07-18","group":"ETH"},{"value":1817.296631,"group":"ETH","date":"2021-07-19"},{"date":"2021-07-20","group":"ETH","value":1787.510742},{"group":"ETH","date":"2021-07-21","value":1990.970825},{"date":"2021-07-22","group":"ETH","value":2025.202759},{"date":"2021-07-23","value":2124.776611,"group":"ETH"},{"value":2189.21875,"group":"ETH","date":"2021-07-24"},{"date":"2021-07-25","group":"ETH","value":2191.373779},{"group":"ETH","value":2233.366699,"date":"2021-07-26"},{"date":"2021-07-27","value":2298.333496,"group":"ETH"},{"date":"2021-07-28","value":2296.54541,"group":"ETH"},{"value":2380.956787,"group":"ETH","date":"2021-07-29"},{"date":"2021-07-30","value":2466.961426,"group":"ETH"},{"date":"2021-07-31","group":"ETH","value":2536.209961},{"value":2561.852051,"date":"2021-08-01","group":"ETH"},{"group":"ETH","value":2610.15332,"date":"2021-08-02"},{"date":"2021-08-03","group":"ETH","value":2502.349609},{"value":2724.619873,"date":"2021-08-04","group":"ETH"},{"value":2827.328857,"date":"2021-08-05","group":"ETH"},{"value":2890.94165,"group":"ETH","date":"2021-08-06"},{"date":"2021-08-07","group":"ETH","value":3157.23877},{"date":"2021-08-08","value":3013.732666,"group":"ETH"},{"value":3167.856201,"group":"ETH","date":"2021-08-09"},{"date":"2021-08-10","group":"ETH","value":3141.691162},{"value":3164.245117,"date":"2021-08-11","group":"ETH"},{"date":"2021-08-12","group":"ETH","value":3043.414307},{"group":"ETH","value":3322.21167,"date":"2021-08-13"},{"date":"2021-08-14","group":"ETH","value":3265.443359},{"group":"ETH","value":3310.50415,"date":"2021-08-15"},{"group":"ETH","date":"2021-08-16","value":3156.509521},{"value":3014.845947,"date":"2021-08-17","group":"ETH"},{"date":"2021-08-18","group":"ETH","value":3020.089844},{"value":3182.702148,"group":"ETH","date":"2021-08-19"},{"value":3286.935303,"group":"ETH","date":"2021-08-20"},{"group":"ETH","date":"2021-08-21","value":3226.083984},{"group":"ETH","value":3242.115479,"date":"2021-08-22"},{"group":"ETH","value":3319.257324,"date":"2021-08-23"},{"value":3172.456299,"date":"2021-08-24","group":"ETH"},{"date":"2021-08-25","group":"ETH","value":3224.915283},{"date":"2021-08-26","group":"ETH","value":3100.325439},{"value":3270.60083,"date":"2021-08-27","group":"ETH"},{"date":"2021-08-28","group":"ETH","value":3244.40332},{"date":"2021-08-29","value":3227.002686,"group":"ETH"},{"group":"ETH","date":"2021-08-30","value":3224.374268},{"value":3433.732666,"date":"2021-08-31","group":"ETH"},{"group":"ETH","date":"2021-09-01","value":3834.828125},{"date":"2021-09-02","group":"ETH","value":3790.98999},{"date":"2021-09-03","value":3940.614746,"group":"ETH"},{"value":3887.828369,"group":"ETH","date":"2021-09-04"},{"value":3952.133545,"date":"2021-09-05","group":"ETH"},{"group":"ETH","date":"2021-09-06","value":3928.379395},{"group":"ETH","date":"2021-09-07","value":3426.394287},{"value":3497.315186,"group":"ETH","date":"2021-09-08"},{"value":3427.340088,"group":"ETH","date":"2021-09-09"},{"date":"2021-09-10","group":"ETH","value":3211.505859},{"value":3270.278076,"group":"ETH","date":"2021-09-11"},{"value":3410.134521,"group":"ETH","date":"2021-09-12"},{"group":"ETH","value":3285.511719,"date":"2021-09-13"},{"group":"ETH","value":3429.169678,"date":"2021-09-14"},{"value":3615.282715,"date":"2021-09-15","group":"ETH"},{"date":"2021-09-16","value":3571.294922,"group":"ETH"},{"date":"2021-09-17","value":3398.538818,"group":"ETH"},{"date":"2021-09-18","group":"ETH","value":3432.018311},{"value":3329.447998,"group":"ETH","date":"2021-09-19"},{"value":2958.993408,"date":"2021-09-20","group":"ETH"},{"date":"2021-09-21","value":2764.431152,"group":"ETH"},{"group":"ETH","value":3077.86792,"date":"2021-09-22"},{"date":"2021-09-23","group":"ETH","value":3155.523682},{"value":2931.669189,"date":"2021-09-24","group":"ETH"},{"value":2925.565674,"date":"2021-09-25","group":"ETH"},{"date":"2021-09-26","value":3062.265381,"group":"ETH"},{"date":"2021-09-27","group":"ETH","value":2934.138916},{"group":"ETH","date":"2021-09-28","value":2807.296631},{"value":2853.143311,"date":"2021-09-29","group":"ETH"},{"group":"ETH","date":"2021-09-30","value":3001.678955},{"group":"ETH","value":3307.516113,"date":"2021-10-01"},{"value":3391.694336,"group":"ETH","date":"2021-10-02"},{"group":"ETH","value":3418.358643,"date":"2021-10-03"},{"date":"2021-10-04","group":"ETH","value":3380.089111},{"group":"ETH","date":"2021-10-05","value":3518.518555},{"date":"2021-10-06","group":"ETH","value":3580.562012},{"group":"ETH","date":"2021-10-07","value":3587.974854},{"group":"ETH","value":3563.759277,"date":"2021-10-08"},{"value":3575.716797,"date":"2021-10-09","group":"ETH"},{"date":"2021-10-10","group":"ETH","value":3425.852783},{"group":"ETH","date":"2021-10-11","value":3545.354004},{"value":3492.573242,"group":"ETH","date":"2021-10-12"},{"value":3606.20166,"group":"ETH","date":"2021-10-13"},{"value":3786.01416,"group":"ETH","date":"2021-10-14"},{"date":"2021-10-15","group":"ETH","value":3862.634766},{"group":"ETH","date":"2021-10-16","value":3830.38208},{"date":"2021-10-17","value":3847.104492,"group":"ETH"},{"group":"ETH","date":"2021-10-18","value":3748.760254},{"value":3877.650879,"group":"ETH","date":"2021-10-19"},{"value":4155.992188,"date":"2021-10-20","group":"ETH"},{"value":4054.322754,"group":"ETH","date":"2021-10-21"},{"date":"2021-10-22","group":"ETH","value":3970.181885},{"date":"2021-10-23","group":"ETH","value":4171.663574},{"group":"ETH","date":"2021-10-24","value":4087.903076},{"date":"2021-10-25","group":"ETH","value":4217.876953},{"group":"ETH","date":"2021-10-26","value":4131.102051},{"group":"ETH","value":3930.257324,"date":"2021-10-27"},{"group":"ETH","value":4287.318848,"date":"2021-10-28"},{"group":"ETH","value":4414.746582,"date":"2021-10-29"},{"value":4325.650391,"group":"ETH","date":"2021-10-30"},{"date":"2021-10-31","group":"ETH","value":4288.074219},{"group":"ETH","value":4324.626953,"date":"2021-11-01"},{"value":4584.798828,"date":"2021-11-02","group":"ETH"},{"value":4607.193848,"group":"ETH","date":"2021-11-03"},{"group":"ETH","date":"2021-11-04","value":4537.324219},{"group":"ETH","date":"2021-11-05","value":4486.243164},{"value":4521.581055,"date":"2021-11-06","group":"ETH"},{"group":"ETH","value":4620.554688,"date":"2021-11-07"},{"value":4812.087402,"date":"2021-11-08","group":"ETH"},{"date":"2021-11-09","value":4735.068848,"group":"ETH"},{"date":"2021-11-10","value":4636.174316,"group":"ETH"},{"group":"ETH","value":4730.384277,"date":"2021-11-11"},{"value":4667.115234,"date":"2021-11-12","group":"ETH"},{"value":4651.460449,"date":"2021-11-13","group":"ETH"},{"group":"ETH","date":"2021-11-14","value":4626.358887},{"group":"ETH","date":"2021-11-15","value":4557.503906},{"group":"ETH","date":"2021-11-16","value":4216.365234},{"group":"ETH","date":"2021-11-17","value":4287.59375},{"date":"2021-11-18","group":"ETH","value":4000.650879},{"value":4298.306641,"group":"ETH","date":"2021-11-19"},{"group":"ETH","value":4409.931152,"date":"2021-11-20"},{"value":4269.73291,"group":"ETH","date":"2021-11-21"},{"date":"2021-11-22","group":"ETH","value":4088.457764},{"value":4340.763672,"date":"2021-11-23","group":"ETH"},{"date":"2021-11-24","value":4239.981445,"group":"ETH"},{"value":4274.743164,"date":"2021-11-25","group":"ETH"},{"group":"ETH","date":"2021-11-26","value":4030.908936},{"value":4096.912109,"date":"2021-11-27","group":"ETH"},{"date":"2021-11-28","value":4294.453613,"group":"ETH"},{"group":"ETH","date":"2021-11-29","value":4445.10498},{"value":4631.479004,"group":"ETH","date":"2021-11-30"},{"value":4586.990234,"date":"2021-12-01","group":"ETH"},{"date":"2021-12-02","value":4511.302246,"group":"ETH"},{"group":"ETH","value":4220.706055,"date":"2021-12-03"},{"value":4119.587402,"group":"ETH","date":"2021-12-04"},{"group":"ETH","date":"2021-12-05","value":4198.322754},{"date":"2021-12-06","value":4358.737305,"group":"ETH"},{"group":"ETH","date":"2021-12-07","value":4315.061523},{"group":"ETH","value":4439.35791,"date":"2021-12-08"},{"date":"2021-12-09","group":"ETH","value":4119.815918},{"value":3908.496094,"date":"2021-12-10","group":"ETH"},{"group":"ETH","date":"2021-12-11","value":4084.452393},{"date":"2021-12-12","value":4134.453125,"group":"ETH"},{"date":"2021-12-13","group":"ETH","value":3784.226807},{"date":"2021-12-14","value":3745.44043,"group":"ETH"},{"value":4018.388672,"date":"2021-12-15","group":"ETH"},{"value":3962.469727,"date":"2021-12-16","group":"ETH"},{"date":"2021-12-17","value":3879.486572,"group":"ETH"},{"value":3960.860107,"group":"ETH","date":"2021-12-18"},{"value":3922.592529,"group":"ETH","date":"2021-12-19"},{"date":"2021-12-20","value":3933.844482,"group":"ETH"},{"value":4020.26001,"group":"ETH","date":"2021-12-21"},{"date":"2021-12-22","value":3982.099609,"group":"ETH"},{"value":4108.015625,"group":"ETH","date":"2021-12-23"},{"group":"ETH","value":4047.98291,"date":"2021-12-24"},{"date":"2021-12-25","value":4093.281006,"group":"ETH"},{"group":"ETH","value":4067.328125,"date":"2021-12-26"},{"value":4037.547607,"group":"ETH","date":"2021-12-27"},{"date":"2021-12-28","value":3800.893066,"group":"ETH"},{"value":3628.531738,"group":"ETH","date":"2021-12-29"},{"value":3713.852051,"date":"2021-12-30","group":"ETH"},{"value":3682.632813,"date":"2021-12-31","group":"ETH"},{"date":"2022-01-01","value":3769.697021,"group":"ETH"},{"value":3829.564941,"group":"ETH","date":"2022-01-02"},{"group":"ETH","date":"2022-01-03","value":3761.380371},{"date":"2022-01-04","group":"ETH","value":3794.056641},{"value":3550.386963,"group":"ETH","date":"2022-01-05"},{"value":3418.408203,"group":"ETH","date":"2022-01-06"},{"value":3193.210449,"date":"2022-01-07","group":"ETH"},{"date":"2022-01-08","group":"ETH","value":3091.972656},{"date":"2022-01-09","value":3157.751465,"group":"ETH"},{"value":3083.0979,"group":"ETH","date":"2022-01-10"},{"value":3238.111572,"group":"ETH","date":"2022-01-11"},{"value":3372.258301,"group":"ETH","date":"2022-01-12"},{"value":3248.288574,"group":"ETH","date":"2022-01-13"},{"date":"2022-01-14","group":"ETH","value":3310.001465},{"value":3330.530762,"date":"2022-01-15","group":"ETH"},{"date":"2022-01-16","group":"ETH","value":3350.921875},{"date":"2022-01-17","value":3212.304932,"group":"ETH"},{"group":"ETH","date":"2022-01-18","value":3164.025146},{"group":"ETH","date":"2022-01-19","value":3095.825928},{"value":3001.120117,"date":"2022-01-20","group":"ETH"},{"group":"ETH","value":2557.931641,"date":"2022-01-21"},{"value":2405.181152,"date":"2022-01-22","group":"ETH"},{"date":"2022-01-23","group":"ETH","value":2535.039063},{"group":"ETH","value":2440.352295,"date":"2022-01-24"},{"group":"ETH","value":2455.935059,"date":"2022-01-25"},{"date":"2022-01-26","value":2468.030273,"group":"ETH"},{"group":"ETH","value":2423.001221,"date":"2022-01-27"},{"group":"ETH","value":2547.092041,"date":"2022-01-28"},{"group":"ETH","date":"2022-01-29","value":2597.084717},{"date":"2022-01-30","group":"ETH","value":2603.466553},{"value":2688.278809,"date":"2022-01-31","group":"ETH"},{"date":"2022-02-01","group":"ETH","value":2792.117188},{"group":"ETH","date":"2022-02-02","value":2682.854004},{"group":"ETH","date":"2022-02-03","value":2679.162598},{"value":2983.586914,"date":"2022-02-04","group":"ETH"},{"group":"ETH","date":"2022-02-05","value":3014.648193},{"date":"2022-02-06","group":"ETH","value":3057.476074},{"value":3142.470703,"group":"ETH","date":"2022-02-07"},{"date":"2022-02-08","group":"ETH","value":3122.608643},{"value":3239.457031,"date":"2022-02-09","group":"ETH"},{"date":"2022-02-10","value":3077.482178,"group":"ETH"},{"date":"2022-02-11","group":"ETH","value":2927.383545},{"group":"ETH","date":"2022-02-12","value":2917.362793},{"date":"2022-02-13","value":2883.463379,"group":"ETH"},{"value":2933.479004,"date":"2022-02-14","group":"ETH"},{"value":3179.877197,"date":"2022-02-15","group":"ETH"},{"group":"ETH","value":3127.830078,"date":"2022-02-16"},{"date":"2022-02-17","value":2881.481934,"group":"ETH"},{"value":2785.727539,"date":"2022-02-18","group":"ETH"},{"value":2763.701172,"date":"2022-02-19","group":"ETH"},{"group":"ETH","value":2628.648438,"date":"2022-02-20"},{"value":2573.816162,"group":"ETH","date":"2022-02-21"},{"date":"2022-02-22","value":2639.299316,"group":"ETH"},{"date":"2022-02-23","value":2590.359619,"group":"ETH"},{"group":"ETH","date":"2022-02-24","value":2598.067139},{"value":2764.535645,"group":"ETH","date":"2022-02-25"},{"value":2781.111816,"group":"ETH","date":"2022-02-26"},{"group":"ETH","date":"2022-02-27","value":2621.801758},{"group":"ETH","date":"2022-02-28","value":2919.201172},{"date":"2022-03-01","value":2972.485107,"group":"ETH"},{"date":"2022-03-02","group":"ETH","value":2950.118408},{"date":"2022-03-03","value":2834.468994,"group":"ETH"},{"group":"ETH","date":"2022-03-04","value":2617.156006},{"group":"ETH","date":"2022-03-05","value":2664.831055},{"group":"ETH","value":2555.037354,"date":"2022-03-06"},{"value":2497.77124,"group":"ETH","date":"2022-03-07"},{"group":"ETH","value":2576.747559,"date":"2022-03-08"},{"date":"2022-03-09","value":2729.783447,"group":"ETH"},{"value":2608.048584,"date":"2022-03-10","group":"ETH"},{"date":"2022-03-11","value":2559.562988,"group":"ETH"},{"value":2574.75415,"date":"2022-03-12","group":"ETH"},{"group":"ETH","value":2518.94458,"date":"2022-03-13"},{"value":2590.696045,"group":"ETH","date":"2022-03-14"},{"group":"ETH","date":"2022-03-15","value":2620.149658},{"group":"ETH","value":2772.055664,"date":"2022-03-16"},{"group":"ETH","date":"2022-03-17","value":2814.854492},{"value":2945.343018,"date":"2022-03-18","group":"ETH"},{"date":"2022-03-19","group":"ETH","value":2946.25708},{"group":"ETH","date":"2022-03-20","value":2860.459229},{"date":"2022-03-21","value":2897.976563,"group":"ETH"},{"group":"ETH","value":2973.131104,"date":"2022-03-22"},{"date":"2022-03-23","group":"ETH","value":3031.067139},{"group":"ETH","value":3108.062012,"date":"2022-03-24"},{"value":3106.671387,"date":"2022-03-25","group":"ETH"},{"date":"2022-03-26","value":3143.178955,"group":"ETH"},{"group":"ETH","value":3291.577637,"date":"2022-03-27"},{"group":"ETH","date":"2022-03-28","value":3336.634521},{"group":"ETH","date":"2022-03-29","value":3401.987793},{"date":"2022-03-30","value":3385.157959,"group":"ETH"},{"group":"ETH","value":3281.642822,"date":"2022-03-31"},{"value":3449.552246,"group":"ETH","date":"2022-04-01"},{"date":"2022-04-02","group":"ETH","value":3445.059326},{"group":"ETH","date":"2022-04-03","value":3522.833496},{"date":"2022-04-04","value":3521.241211,"group":"ETH"},{"value":3411.79248,"group":"ETH","date":"2022-04-05"},{"value":3171.691895,"group":"ETH","date":"2022-04-06"},{"group":"ETH","value":3233.274658,"date":"2022-04-07"},{"date":"2022-04-08","group":"ETH","value":3192.073975},{"date":"2022-04-09","group":"ETH","value":3261.91626},{"date":"2022-04-10","value":3211.866943,"group":"ETH"},{"value":2981.052246,"group":"ETH","date":"2022-04-11"},{"value":3030.376465,"date":"2022-04-12","group":"ETH"},{"date":"2022-04-13","group":"ETH","value":3118.344238},{"group":"ETH","date":"2022-04-14","value":3019.909424},{"value":3040.916504,"date":"2022-04-15","group":"ETH"},{"date":"2022-04-16","group":"ETH","value":3062.310303},{"value":2993.40332,"date":"2022-04-17","group":"ETH"},{"value":3057.606689,"date":"2022-04-18","group":"ETH"},{"value":3104.106445,"date":"2022-04-19","group":"ETH"},{"group":"ETH","value":3077.74585,"date":"2022-04-20"},{"date":"2022-04-21","value":2987.480713,"group":"ETH"},{"group":"ETH","date":"2022-04-22","value":2964.835693},{"value":2938.114014,"group":"ETH","date":"2022-04-23"},{"group":"ETH","date":"2022-04-24","value":2922.732666},{"value":3009.393555,"date":"2022-04-25","group":"ETH"},{"value":2808.29834,"date":"2022-04-26","group":"ETH"},{"date":"2022-04-27","value":2888.929688,"group":"ETH"},{"value":2936.940918,"group":"ETH","date":"2022-04-28"},{"group":"ETH","date":"2022-04-29","value":2815.601807},{"date":"2022-04-30","value":2730.186768,"group":"ETH"},{"value":2827.756104,"date":"2022-05-01","group":"ETH"},{"group":"ETH","date":"2022-05-02","value":2857.4104},{"value":2783.476318,"date":"2022-05-03","group":"ETH"},{"group":"ETH","date":"2022-05-04","value":2940.644775},{"group":"ETH","value":2749.213135,"date":"2022-05-05"},{"date":"2022-05-06","group":"ETH","value":2694.979736},{"date":"2022-05-07","value":2636.093018,"group":"ETH"},{"group":"ETH","value":2517.459961,"date":"2022-05-08"},{"value":2245.43042,"group":"ETH","date":"2022-05-09"},{"group":"ETH","value":2343.510986,"date":"2022-05-10"},{"value":2072.108643,"group":"ETH","date":"2022-05-11"},{"group":"ETH","date":"2022-05-12","value":1961.701538},{"date":"2022-05-13","value":2014.418213,"group":"ETH"},{"date":"2022-05-14","group":"ETH","value":2056.273926},{"date":"2022-05-15","group":"ETH","value":2145.706787},{"group":"ETH","value":2022.725952,"date":"2022-05-16"},{"value":2090.40918,"date":"2022-05-17","group":"ETH"},{"group":"ETH","value":1916.656128,"date":"2022-05-18"},{"date":"2022-05-19","value":2018.336182,"group":"ETH"},{"date":"2022-05-20","group":"ETH","value":1961.315674},{"value":1974.518311,"group":"ETH","date":"2022-05-21"},{"value":2043.170166,"date":"2022-05-22","group":"ETH"},{"date":"2022-05-23","group":"ETH","value":1972.181885},{"date":"2022-05-24","value":1978.982788,"group":"ETH"},{"group":"ETH","date":"2022-05-25","value":1944.827881},{"group":"ETH","date":"2022-05-26","value":1803.91333},{"value":1724.922852,"date":"2022-05-27","group":"ETH"},{"group":"ETH","date":"2022-05-28","value":1757.941772},{"value":1812.031006,"date":"2022-05-29","group":"ETH"},{"date":"2022-05-30","value":1996.441284,"group":"ETH"},{"value":1942.328003,"group":"ETH","date":"2022-05-31"},{"value":1823.569336,"group":"ETH","date":"2022-06-01"},{"group":"ETH","date":"2022-06-02","value":1834.150513},{"date":"2022-06-03","group":"ETH","value":1775.078613},{"date":"2022-06-04","group":"ETH","value":1801.609497},{"value":1805.204956,"group":"ETH","date":"2022-06-05"},{"date":"2022-06-06","value":1859.289673,"group":"ETH"},{"group":"ETH","date":"2022-06-07","value":1814.04834},{"date":"2022-06-08","value":1793.572266,"group":"ETH"},{"value":1789.82605,"group":"ETH","date":"2022-06-09"},{"group":"ETH","value":1665.042236,"date":"2022-06-10"},{"date":"2022-06-11","value":1529.663452,"group":"ETH"},{"date":"2022-06-12","value":1445.216553,"group":"ETH"},{"group":"ETH","value":1204.582764,"date":"2022-06-13"},{"group":"ETH","value":1211.662842,"date":"2022-06-14"},{"value":1233.206421,"group":"ETH","date":"2022-06-15"},{"date":"2022-06-16","value":1067.730713,"group":"ETH"},{"date":"2022-06-17","value":1086.519287,"group":"ETH"},{"group":"ETH","date":"2022-06-18","value":993.63678},{"date":"2022-06-19","value":1127.656494,"group":"ETH"},{"date":"2022-06-20","value":1127.642456,"group":"ETH"},{"date":"2022-06-21","value":1124.824585,"group":"ETH"},{"value":1051.421875,"date":"2022-06-22","group":"ETH"},{"date":"2022-06-23","value":1143.386719,"group":"ETH"},{"group":"ETH","value":1226.844727,"date":"2022-06-24"},{"group":"ETH","value":1243.446899,"date":"2022-06-25"},{"date":"2022-06-26","value":1199.831665,"group":"ETH"},{"group":"ETH","value":1193.680664,"date":"2022-06-27"},{"date":"2022-06-28","group":"ETH","value":1144.579224},{"group":"ETH","value":1098.943848,"date":"2022-06-29"},{"date":"2022-06-30","group":"ETH","value":1067.298828},{"group":"ETH","date":"2022-07-01","value":1059.767334},{"value":1066.512817,"date":"2022-07-02","group":"ETH"},{"value":1073.766968,"date":"2022-07-03","group":"ETH"},{"value":1151.059082,"group":"ETH","date":"2022-07-04"},{"date":"2022-07-05","group":"ETH","value":1134.541016},{"group":"ETH","date":"2022-07-06","value":1186.973999},{"date":"2022-07-07","group":"ETH","value":1237.593384},{"group":"ETH","value":1222.506226,"date":"2022-07-08"},{"date":"2022-07-09","value":1216.978271,"group":"ETH"},{"value":1168.401611,"group":"ETH","date":"2022-07-10"},{"value":1097.236572,"date":"2022-07-11","group":"ETH"},{"group":"ETH","value":1038.19165,"date":"2022-07-12"},{"date":"2022-07-13","value":1113.587158,"group":"ETH"},{"value":1191.526245,"group":"ETH","date":"2022-07-14"},{"value":1233.12915,"date":"2022-07-15","group":"ETH"},{"value":1352.626465,"date":"2022-07-16","group":"ETH"},{"group":"ETH","date":"2022-07-17","value":1338.635742},{"group":"ETH","date":"2022-07-18","value":1578.717896},{"date":"2022-07-19","group":"ETH","value":1542.97522},{"value":1520.200684,"group":"ETH","date":"2022-07-20"},{"date":"2022-07-21","group":"ETH","value":1576.749512},{"date":"2022-07-22","group":"ETH","value":1537.405151},{"date":"2022-07-23","group":"ETH","value":1549.297485},{"date":"2022-07-24","group":"ETH","value":1599.476685},{"group":"ETH","value":1445.383423,"date":"2022-07-25"},{"group":"ETH","value":1441.806763,"date":"2022-07-26"},{"value":1636.232666,"date":"2022-07-27","group":"ETH"},{"value":1725.46814,"group":"ETH","date":"2022-07-28"},{"value":1727.406982,"group":"ETH","date":"2022-07-29"},{"group":"ETH","value":1695.969482,"date":"2022-07-30"},{"value":1681.517334,"group":"ETH","date":"2022-07-31"},{"group":"ETH","date":"2022-08-01","value":1635.195801},{"group":"ETH","value":1632.945435,"date":"2022-08-02"},{"group":"ETH","value":1618.874512,"date":"2022-08-03"},{"value":1608.205811,"group":"ETH","date":"2022-08-04"},{"value":1732.254639,"date":"2022-08-05","group":"ETH"},{"group":"ETH","value":1691.658081,"date":"2022-08-06"},{"group":"ETH","value":1699.35083,"date":"2022-08-07"},{"date":"2022-08-08","value":1775.516113,"group":"ETH"},{"value":1703.025024,"group":"ETH","date":"2022-08-09"},{"date":"2022-08-10","group":"ETH","value":1851.742676},{"group":"ETH","date":"2022-08-11","value":1881.224121},{"date":"2022-08-12","value":1957.24646,"group":"ETH"},{"group":"ETH","value":1981.336548,"date":"2022-08-13"},{"group":"ETH","date":"2022-08-14","value":1936.802002},{"value":1904.228149,"group":"ETH","date":"2022-08-15"},{"group":"ETH","date":"2022-08-16","value":1878.139404},{"group":"ETH","value":1832.999634,"date":"2022-08-17"},{"group":"ETH","date":"2022-08-18","value":1847.007813},{"group":"ETH","date":"2022-08-19","value":1612.987305},{"date":"2022-08-20","value":1577.003784,"group":"ETH"},{"date":"2022-08-21","value":1619.31897,"group":"ETH"},{"group":"ETH","value":1622.505859,"date":"2022-08-22"},{"value":1662.769897,"group":"ETH","date":"2022-08-23"},{"group":"ETH","date":"2022-08-24","value":1657.059204},{"date":"2022-08-25","group":"ETH","value":1696.457031},{"value":1507.782837,"date":"2022-08-26","group":"ETH"},{"value":1491.39502,"date":"2022-08-27","group":"ETH"},{"value":1430.547363,"group":"ETH","date":"2022-08-28"},{"group":"ETH","date":"2022-08-29","value":1553.037354},{"date":"2022-08-30","group":"ETH","value":1523.838867},{"value":1553.684937,"date":"2022-08-31","group":"ETH"},{"date":"2022-09-01","group":"ETH","value":1586.176758},{"value":1577.220459,"date":"2022-09-02","group":"ETH"},{"group":"ETH","value":1556.872681,"date":"2022-09-03"},{"date":"2022-09-04","value":1577.641602,"group":"ETH"},{"date":"2022-09-05","group":"ETH","value":1617.183228},{"group":"ETH","date":"2022-09-06","value":1561.748535},{"date":"2022-09-07","group":"ETH","value":1629.906372},{"value":1635.347656,"group":"ETH","date":"2022-09-08"},{"group":"ETH","date":"2022-09-09","value":1719.085449},{"group":"ETH","date":"2022-09-10","value":1776.203735},{"value":1761.800049,"group":"ETH","date":"2022-09-11"},{"date":"2022-09-12","value":1713.765259,"group":"ETH"},{"value":1580.787964,"group":"ETH","date":"2022-09-13"},{"group":"ETH","value":1634.755005,"date":"2022-09-14"},{"group":"ETH","date":"2022-09-15","value":1471.693481},{"value":1432.447754,"group":"ETH","date":"2022-09-16"},{"value":1469.741699,"date":"2022-09-17","group":"ETH"},{"group":"ETH","value":1335.329102,"date":"2022-09-18"},{"group":"ETH","date":"2022-09-19","value":1377.541382},{"value":1324.388184,"date":"2022-09-20","group":"ETH"},{"value":1252.607788,"group":"ETH","date":"2022-09-21"},{"date":"2022-09-22","group":"ETH","value":1327.680176},{"date":"2022-09-23","value":1328.259521,"group":"ETH"},{"value":1317.993286,"group":"ETH","date":"2022-09-24"},{"value":1294.216797,"group":"ETH","date":"2022-09-25"},{"value":1335.32019,"date":"2022-09-26","group":"ETH"},{"date":"2022-09-27","value":1330.127686,"group":"ETH"},{"group":"ETH","date":"2022-09-28","value":1337.410889},{"group":"ETH","value":1335.652344,"date":"2022-09-29"},{"date":"2022-09-30","value":1327.978638,"group":"ETH"},{"value":1311.644409,"group":"ETH","date":"2022-10-01"},{"date":"2022-10-02","value":1276.093506,"group":"ETH"},{"group":"ETH","value":1323.439209,"date":"2022-10-03"},{"value":1362.126587,"group":"ETH","date":"2022-10-04"},{"group":"ETH","value":1352.837158,"date":"2022-10-05"},{"group":"ETH","date":"2022-10-06","value":1351.709473},{"value":1332.516968,"group":"ETH","date":"2022-10-07"},{"date":"2022-10-08","group":"ETH","value":1315.500488},{"date":"2022-10-09","value":1322.604248,"group":"ETH"},{"value":1291.337646,"date":"2022-10-10","group":"ETH"},{"group":"ETH","date":"2022-10-11","value":1279.575684},{"value":1294.906372,"group":"ETH","date":"2022-10-12"},{"group":"ETH","value":1288.123901,"date":"2022-10-13"},{"group":"ETH","date":"2022-10-14","value":1297.422119},{"value":1274.871704,"group":"ETH","date":"2022-10-15"},{"group":"ETH","value":1306.296631,"date":"2022-10-16"},{"group":"ETH","value":1331.713623,"date":"2022-10-17"},{"value":1310.447021,"date":"2022-10-18","group":"ETH"},{"group":"ETH","value":1285.744263,"date":"2022-10-19"},{"value":1283.200928,"date":"2022-10-20","group":"ETH"},{"value":1299.946411,"group":"ETH","date":"2022-10-21"},{"group":"ETH","value":1314.299194,"date":"2022-10-22"},{"value":1363.447021,"date":"2022-10-23","group":"ETH"},{"date":"2022-10-24","group":"ETH","value":1344.998535},{"group":"ETH","value":1461.665405,"date":"2022-10-25"},{"group":"ETH","value":1566.56665,"date":"2022-10-26"},{"date":"2022-10-27","value":1514.374878,"group":"ETH"},{"value":1555.477905,"group":"ETH","date":"2022-10-28"},{"value":1619.698486,"date":"2022-10-29","group":"ETH"},{"value":1590.783325,"group":"ETH","date":"2022-10-30"},{"date":"2022-10-31","value":1572.714478,"group":"ETH"},{"value":1579.70459,"group":"ETH","date":"2022-11-01"},{"value":1519.711792,"date":"2022-11-02","group":"ETH"},{"value":1531.541748,"group":"ETH","date":"2022-11-03"},{"value":1645.093384,"date":"2022-11-04","group":"ETH"},{"group":"ETH","date":"2022-11-05","value":1627.968018},{"group":"ETH","date":"2022-11-06","value":1572.234741},{"date":"2022-11-07","value":1568.591309,"group":"ETH"},{"group":"ETH","date":"2022-11-08","value":1332.835571},{"value":1100.1698,"group":"ETH","date":"2022-11-09"},{"date":"2022-11-10","group":"ETH","value":1299.4646},{"group":"ETH","date":"2022-11-11","value":1287.221069},{"value":1255.268311,"date":"2022-11-12","group":"ETH"},{"group":"ETH","date":"2022-11-13","value":1221.819214},{"value":1241.604248,"group":"ETH","date":"2022-11-14"},{"value":1251.736206,"group":"ETH","date":"2022-11-15"},{"value":1215.602539,"date":"2022-11-16","group":"ETH"},{"value":1200.808594,"date":"2022-11-17","group":"ETH"},{"group":"ETH","date":"2022-11-18","value":1212.300293},{"group":"ETH","value":1218.426758,"date":"2022-11-19"},{"date":"2022-11-20","group":"ETH","value":1142.466675},{"group":"ETH","date":"2022-11-21","value":1108.353027},{"value":1135.173462,"date":"2022-11-22","group":"ETH"},{"value":1183.199585,"group":"ETH","date":"2022-11-23"},{"date":"2022-11-24","value":1203.983154,"group":"ETH"},{"value":1198.925903,"group":"ETH","date":"2022-11-25"},{"value":1205.897949,"group":"ETH","date":"2022-11-26"},{"value":1195.126953,"group":"ETH","date":"2022-11-27"},{"date":"2022-11-28","group":"ETH","value":1170.086182},{"group":"ETH","value":1216.901245,"date":"2022-11-29"},{"group":"ETH","value":1295.688599,"date":"2022-11-30"},{"group":"ETH","date":"2022-12-01","value":1276.273926},{"group":"ETH","value":1294.303345,"date":"2022-12-02"},{"value":1243.334839,"group":"ETH","date":"2022-12-03"},{"group":"ETH","date":"2022-12-04","value":1280.256592},{"date":"2022-12-05","value":1259.676758,"group":"ETH"},{"value":1271.653809,"group":"ETH","date":"2022-12-06"},{"date":"2022-12-07","group":"ETH","value":1232.4375},{"value":1281.116333,"date":"2022-12-08","group":"ETH"},{"value":1264.28479,"date":"2022-12-09","group":"ETH"},{"date":"2022-12-10","value":1266.384155,"group":"ETH"},{"group":"ETH","value":1263.86853,"date":"2022-12-11"},{"date":"2022-12-12","group":"ETH","value":1274.619019},{"value":1320.549194,"date":"2022-12-13","group":"ETH"},{"value":1309.328735,"date":"2022-12-14","group":"ETH"},{"group":"ETH","value":1266.353882,"date":"2022-12-15"},{"value":1168.259399,"group":"ETH","date":"2022-12-16"},{"value":1188.149536,"date":"2022-12-17","group":"ETH"},{"group":"ETH","value":1184.71521,"date":"2022-12-18"},{"value":1167.609863,"date":"2022-12-19","group":"ETH"},{"group":"ETH","value":1217.703613,"date":"2022-12-20"},{"date":"2022-12-21","group":"ETH","value":1213.599976},{"value":1218.182129,"date":"2022-12-22","group":"ETH"},{"group":"ETH","value":1220.159424,"date":"2022-12-23"},{"date":"2022-12-24","group":"ETH","value":1221.14856},{"date":"2022-12-25","value":1218.962036,"group":"ETH"},{"date":"2022-12-26","group":"ETH","value":1226.974365},{"value":1212.791626,"group":"ETH","date":"2022-12-27"},{"group":"ETH","date":"2022-12-28","value":1189.986084},{"group":"ETH","value":1201.595337,"date":"2022-12-29"},{"date":"2022-12-30","value":1199.232788,"group":"ETH"},{"value":1196.77124,"date":"2022-12-31","group":"ETH"},{"value":1200.964844,"date":"2023-01-01","group":"ETH"},{"value":1214.656616,"group":"ETH","date":"2023-01-02"},{"value":1214.778809,"date":"2023-01-03","group":"ETH"},{"group":"ETH","date":"2023-01-04","value":1256.526611},{"group":"ETH","value":1250.438599,"date":"2023-01-05"},{"value":1269.379028,"group":"ETH","date":"2023-01-06"},{"group":"ETH","date":"2023-01-07","value":1264.270386},{"value":1287.359497,"group":"ETH","date":"2023-01-08"},{"value":1321.53894,"date":"2023-01-09","group":"ETH"},{"value":1336.58606,"group":"ETH","date":"2023-01-10"},{"value":1387.932739,"group":"ETH","date":"2023-01-11"},{"group":"ETH","value":1417.938477,"date":"2023-01-12"},{"value":1451.614868,"group":"ETH","date":"2023-01-13"},{"group":"ETH","value":1550.706909,"date":"2023-01-14"},{"value":1552.479492,"group":"ETH","date":"2023-01-15"},{"value":1576.833496,"group":"ETH","date":"2023-01-16"},{"group":"ETH","date":"2023-01-17","value":1567.846069},{"group":"ETH","value":1515.506958,"date":"2023-01-18"},{"group":"ETH","date":"2023-01-19","value":1552.556519},{"date":"2023-01-20","value":1659.75415,"group":"ETH"},{"value":1627.118164,"date":"2023-01-21","group":"ETH"},{"date":"2023-01-22","value":1628.38208,"group":"ETH"},{"group":"ETH","value":1628.251099,"date":"2023-01-23"},{"date":"2023-01-24","group":"ETH","value":1556.604248},{"value":1611.71106,"group":"ETH","date":"2023-01-25"},{"date":"2023-01-26","value":1603.105957,"group":"ETH"},{"group":"ETH","date":"2023-01-27","value":1598.156494},{"date":"2023-01-28","value":1572.435059,"group":"ETH"},{"group":"ETH","value":1646.15564,"date":"2023-01-29"},{"date":"2023-01-30","value":1567.326538,"group":"ETH"},{"date":"2023-01-31","group":"ETH","value":1586.5354},{"group":"ETH","date":"2023-02-01","value":1641.792725},{"value":1643.241577,"date":"2023-02-02","group":"ETH"},{"date":"2023-02-03","group":"ETH","value":1664.745605},{"group":"ETH","value":1667.059204,"date":"2023-02-04"},{"value":1631.645874,"date":"2023-02-05","group":"ETH"},{"group":"ETH","date":"2023-02-06","value":1616.24707},{"group":"ETH","value":1672.00354,"date":"2023-02-07"},{"date":"2023-02-08","group":"ETH","value":1650.716797},{"group":"ETH","date":"2023-02-09","value":1620.343262}]
+
+data = data.map(function(d){
+  var d2 = d;
+  d2["x"] = d3.timeParse("%Y-%m-%d")(d.date);
+  if ( "value" in d ) { d2["y"] = d.value; }
+  return d2
+})
+
+var yMin = Math.min.apply(Math, data.map(function(o) { return o.y; }))
+var yMax = Math.max.apply(Math, data.map(function(o) { return o.y; }))
+
+// Add X axis --> it is a date format
+var x = d3.scaleTime()
+      .domain(d3.extent(data, function(d) { return d.x; }))
+      .range([ 0, width ]);
+
+// Y scale and Axis
+var y = d3.scaleLinear()
+    .domain([yMin, yMax])
+    .range([height, 0]);
+
+svg
+  .append('g')
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+
+svg
+  .append('g')
+  .call(d3.axisLeft(y));
+
+// group the data: I want to draw one line per group
+var sumstat = d3.group(data, d => d.group);
+
+// Add a scale for line color
+var myColor = d3.scaleOrdinal()
+    .domain(data.map(function(o) { return o.group; }))
+    .range(d3.schemeSet2);
+
+// Draw the line
+svg.selectAll(".line")
+      .data(sumstat)
+      .join("path")
+        .attr("fill", "none")
+        .attr("stroke", function(d){ return myColor(d[0]) })
+        .attr("stroke-width", 1.5)
+        .attr("d", function(d){
+          return d3.line()
+            .x(function(d) { return x(d.x); })
+            .y(function(d) { return y(+d.y); })
+            (d[1])
+        })
+
+// create a list of keys
+var keys = data.map(function(o) { return o.group; })
+keys = [...new Set(keys)];
+
+// Add one dot in the legend for each name.
+svg.selectAll("mydots")
+  .data(keys)
+  .enter()
+  .append("circle")
+    .attr("cx", width + 3*12)
+    .attr("cy", function(d,i){ return 0 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+    .attr("r", 6)
+    .style("fill", function(d){ return myColor(d)})
+
+// Add one dot in the legend for each name.
+svg.selectAll("mylabels")
+  .data(keys)
+  .enter()
+  .append("text")
+    .attr("x", width + 3*12 + 12)
+    .attr("y", function(d,i){ return 0 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+    .style("fill", function(d){ return myColor(d)})
+    .text(function(d){ return d})
+    .attr("text-anchor", "left")
+    .style("alignment-baseline", "middle")
+    .style("font-size", "12px")
+    .attr("font-family", "Courier")
+
+</script>
+</body>
+</html>
+
+
+
+<p><hr></p>
+
+<h2>
+Pareto principle adherence
+</h2>
+
+<p>
+Get data for all cryptocurrencies:
+</p>
+
+<pre><code class="perl6">
+my @dsData = cryptocurrency-data('all', dates => (now - 14 * 24 * 3600, now), props => ['Symbol', 'DateTime', 'Close', 'Volume'], format => 'dataset');
+say "Dimensions : {dimensions(@dsData)}.";
+</code></pre>
+
+<pre><code>
+# Dimensions : 307 4.
+</code></pre>
+
+
+<p>
+Clean data and show summary:
+</p>
+
+<pre><code class="perl6">
+@dsData = @dsData.grep({ $_<Close> ~~ Numeric });
+#records-summary(@dsData);
+</code></pre>
+
+<pre><code>
+# [{Close => 1.111184, DateTime => 2023-01-27T00:00:00Z, Symbol => EOS, Volume => 144327627} {Close => 1.093061, DateTime => 2023-01-28T00:00:00Z, Symbol => EOS, Volume => 92469036} {Close => 1.114804, DateTime => 2023-01-29T00:00:00Z, Symbol => EOS, Volume => 98319790} {Close => 1.047359, DateTime => 2023-01-30T00:00:00Z, Symbol => EOS, Volume => 156703642} {Close => 1.063317, DateTime => 2023-01-31T00:00:00Z, Symbol => EOS, Volume => 100707961} {Close => 1.077765, DateTime => 2023-02-01T00:00:00Z, Symbol => EOS, Volume => 141596293} {Close => 1.067605, DateTime => 2023-02-02T00:00:00Z, Symbol => EOS, Volume => 150130207} {Close => 1.095152, DateTime => 2023-02-03T00:00:00Z, Symbol => EOS, Volume => 123834412} {Close => 1.107828, DateTime => 2023-02-04T00:00:00Z, Symbol => EOS, Volume => 98688891} {Close => 1.082602, DateTime => 2023-02-05T00:00:00Z, Symbol => EOS, Volume => 135259503} {Close => 1.059553, DateTime => 2023-02-06T00:00:00Z, Symbol => EOS, Volume => 109985988} {Close => 1.112753, DateTime => 2023-02-07T00:00:00Z, Symbol => EOS, Volume => 134577597} {Close => 1.083791, DateTime => 2023-02-08T00:00:00Z, Symbol => EOS, Volume => 124223301} {Close => 1.055292, DateTime => 2023-02-09T00:00:00Z, Symbol => EOS, Volume => 132284712} {Close => 1598.156494, DateTime => 2023-01-27T00:00:00Z, Symbol => ETH, Volume => 8124465373} {Close => 1572.435059, DateTime => 2023-01-28T00:00:00Z, Symbol => ETH, Volume => 5803653357} {Close => 1646.15564, DateTime => 2023-01-29T00:00:00Z, Symbol => ETH, Volume => 8801292300} {Close => 1567.326538, DateTime => 2023-01-30T00:00:00Z, Symbol => ETH, Volume => 9180418120} {Close => 1586.5354, DateTime => 2023-01-31T00:00:00Z, Symbol => ETH, Volume => 6585191019} {Close => 1641.792725, DateTime => 2023-02-01T00:00:00Z, Symbol => ETH, Volume => 8116969489} {Close => 1643.241577, DateTime => 2023-02-02T00:00:00Z, Symbol => ETH, Volume => 10558081069} {Close => 1664.745605, DateTime => 2023-02-03T00:00:00Z, Symbol => ETH, Volume => 8169519805} {Close => 1667.059204, DateTime => 2023-02-04T00:00:00Z, Symbol => ETH, Volume => 5843302512} {Close => 1631.645874, DateTime => 2023-02-05T00:00:00Z, Symbol => ETH, Volume => 6926696531} {Close => 1616.24707, DateTime => 2023-02-06T00:00:00Z, Symbol => ETH, Volume => 6919871886} {Close => 1672.00354, DateTime => 2023-02-07T00:00:00Z, Symbol => ETH, Volume => 8030277434} {Close => 1650.716797, DateTime => 2023-02-08T00:00:00Z, Symbol => ETH, Volume => 7806089579} {Close => 1620.343262, DateTime => 2023-02-09T00:00:00Z, Symbol => ETH, Volume => 8029462016} {Close => 308.123108, DateTime => 2023-01-27T00:00:00Z, Symbol => BNB, Volume => 484897937} {Close => 306.244324, DateTime => 2023-01-28T00:00:00Z, Symbol => BNB, Volume => 434715822} {Close => 317.336212, DateTime => 2023-01-29T00:00:00Z, Symbol => BNB, Volume => 664644693} {Close => 307.068878, DateTime => 2023-01-30T00:00:00Z, Symbol => BNB, Volume => 630938594} {Close => 312.361053, DateTime => 2023-01-31T00:00:00Z, Symbol => BNB, Volume => 487472184} {Close => 317.472595, DateTime => 2023-02-01T00:00:00Z, Symbol => BNB, Volume => 616638893} {Close => 323.349792, DateTime => 2023-02-02T00:00:00Z, Symbol => BNB, Volume => 909077028} {Close => 332.268677, DateTime => 2023-02-03T00:00:00Z, Symbol => BNB, Volume => 861598551} {Close => 330.617096, DateTime => 2023-02-04T00:00:00Z, Symbol => BNB, Volume => 440935963} {Close => 327.869354, DateTime => 2023-02-05T00:00:00Z, Symbol => BNB, Volume => 662969265} {Close => 324.627167, DateTime => 2023-02-06T00:00:00Z, Symbol => BNB, Volume => 521894604} {Close => 333.227875, DateTime => 2023-02-07T00:00:00Z, Symbol => BNB, Volume => 521804212} {Close => 328.088654, DateTime => 2023-02-08T00:00:00Z, Symbol => BNB, Volume => 515127902} {Close => 320.263794, DateTime => 2023-02-09T00:00:00Z, Symbol => BNB, Volume => 578922816} {Close => 0.063582, DateTime => 2023-01-27T00:00:00Z, Symbol => TRX, Volume => 321741026} {Close => 0.063092, DateTime => 2023-01-28T00:00:00Z, Symbol => TRX, Volume => 232264924} {Close => 0.063794, DateTime => 2023-01-29T00:00:00Z, Symbol => TRX, Volume => 298809875} {Close => 0.062247, DateTime => 2023-01-30T00:00:00Z, Symbol => TRX, Volume => 322622838} {Close => 0.06222, DateTime => 2023-01-31T00:00:00Z, Symbol => TRX, Volume => 272093600} {Close => 0.063193, DateTime => 2023-02-01T00:00:00Z, Symbol => TRX, Volume => 281503052} {Close => 0.063761, DateTime => 2023-02-02T00:00:00Z, Symbol => TRX, Volume => 408694985} {Close => 0.064122, DateTime => 2023-02-03T00:00:00Z, Symbol => TRX, Volume => 331119561} {Close => 0.063824, DateTime => 2023-02-04T00:00:00Z, Symbol => TRX, Volume => 240138022} {Close => 0.064085, DateTime => 2023-02-05T00:00:00Z, Symbol => TRX, Volume => 383628012} {Close => 0.063194, DateTime => 2023-02-06T00:00:00Z, Symbol => TRX, Volume => 263575211} {Close => 0.065774, DateTime => 2023-02-07T00:00:00Z, Symbol => TRX, Volume => 391361423} {Close => 0.066874, DateTime => 2023-02-08T00:00:00Z, Symbol => TRX, Volume => 627966026} {Close => 0.064316, DateTime => 2023-02-09T00:00:00Z, Symbol => TRX, Volume => 633674560} {Close => 1.000182, DateTime => 2023-01-27T00:00:00Z, Symbol => USDT, Volume => 34658058512} {Close => 1.000194, DateTime => 2023-01-28T00:00:00Z, Symbol => USDT, Volume => 23967491540} {Close => 1.000099, DateTime => 2023-01-29T00:00:00Z, Symbol => USDT, Volume => 33570913369} {Close => 1.000093, DateTime => 2023-01-30T00:00:00Z, Symbol => USDT, Volume => 37178895589} {Close => 1.000117, DateTime => 2023-01-31T00:00:00Z, Symbol => USDT, Volume => 31416134222} {Close => 1.000098, DateTime => 2023-02-01T00:00:00Z, Symbol => USDT, Volume => 36688644471} {Close => 1.00014, DateTime => 2023-02-02T00:00:00Z, Symbol => USDT, Volume => 43575657052} {Close => 1.000131, DateTime => 2023-02-03T00:00:00Z, Symbol => USDT, Volume => 36792033814} {Close => 1.0001, DateTime => 2023-02-04T00:00:00Z, Symbol => USDT, Volume => 24493083193} {Close => 1.000198, DateTime => 2023-02-05T00:00:00Z, Symbol => USDT, Volume => 30313569702} {Close => 1.000102, DateTime => 2023-02-06T00:00:00Z, Symbol => USDT, Volume => 32088027094} {Close => 1.000077, DateTime => 2023-02-07T00:00:00Z, Symbol => USDT, Volume => 39183502892} {Close => 1.000131, DateTime => 2023-02-08T00:00:00Z, Symbol => USDT, Volume => 39133872723} {Close => 1.000115, DateTime => 2023-02-09T00:00:00Z, Symbol => USDT, Volume => 41094189056} {Close => 23078.728516, DateTime => 2023-01-27T00:00:00Z, Symbol => BTC, Volume => 25383335641} {Close => 23031.089844, DateTime => 2023-01-28T00:00:00Z, Symbol => BTC, Volume => 14712928379} {Close => 23774.566406, DateTime => 2023-01-29T00:00:00Z, Symbol => BTC, Volume => 27423687259} {Close => 22840.138672, DateTime => 2023-01-30T00:00:00Z, Symbol => BTC, Volume => 27205595568} {Close => 23139.283203, DateTime => 2023-01-31T00:00:00Z, Symbol => BTC, Volume => 22837828665} {Close => 23723.769531, DateTime => 2023-02-01T00:00:00Z, Symbol => BTC, Volume => 26683255504} {Close => 23471.871094, DateTime => 2023-02-02T00:00:00Z, Symbol => BTC, Volume => 32066936882} {Close => 23449.322266, DateTime => 2023-02-03T00:00:00Z, Symbol => BTC, Volume => 27083066007} {Close => 23331.847656, DateTime => 2023-02-04T00:00:00Z, Symbol => BTC, Volume => 15639298538} {Close => 22955.666016, DateTime => 2023-02-05T00:00:00Z, Symbol => BTC, Volume => 19564262605} {Close => 22760.109375, DateTime => 2023-02-06T00:00:00Z, Symbol => BTC, Volume => 23825006542} {Close => 23264.291016, DateTime => 2023-02-07T00:00:00Z, Symbol => BTC, Volume => 27187964471} {Close => 22939.398438, DateTime => 2023-02-08T00:00:00Z, Symbol => BTC, Volume => 25371367758} {Close => 22575.779297, DateTime => 2023-02-09T00:00:00Z, Symbol => BTC, Volume => 26831863808} {Close => 134.915115, DateTime => 2023-01-27T00:00:00Z, Symbol => BCH, Volume => 191933573} {Close => 132.631836, DateTime => 2023-01-28T00:00:00Z, Symbol => BCH, Volume => 168595111} {Close => 136.719681, DateTime => 2023-01-29T00:00:00Z, Symbol => BCH, Volume => 208860844} {Close => 130.905991, DateTime => 2023-01-30T00:00:00Z, Symbol => BCH, Volume => 203674676} {Close => 133.396729, DateTime => 2023-01-31T00:00:00Z, Symbol => BCH, Volume => 186997808} {Close => 136.291779, DateTime => 2023-02-01T00:00:00Z, Symbol => BCH, Volume => 182482657} {Close => 136.686279, DateTime => 2023-02-02T00:00:00Z, Symbol => BCH, Volume => 224622869} {Close => 137.899902, DateTime => 2023-02-03T00:00:00Z, Symbol => BCH, Volume => 172264478} {Close => 138.272247, DateTime => 2023-02-04T00:00:00Z, Symbol => BCH, Volume => 151670335} {Close => 134.462921, DateTime => 2023-02-05T00:00:00Z, Symbol => BCH, Volume => 160929294} {Close => 131.602692, DateTime => 2023-02-06T00:00:00Z, Symbol => BCH, Volume => 117258317} {Close => 135.969208, DateTime => 2023-02-07T00:00:00Z, Symbol => BCH, Volume => 199061198} {Close => 131.495438, DateTime => 2023-02-08T00:00:00Z, Symbol => BCH, Volume => 207253748} {Close => 128.790863, DateTime => 2023-02-09T00:00:00Z, Symbol => BCH, Volume => 213128336} {Close => 7.37127, DateTime => 2023-01-27T00:00:00Z, Symbol => LINK, Volume => 409716317} {Close => 7.207573, DateTime => 2023-01-28T00:00:00Z, Symbol => LINK, Volume => 247360344} ...]
+</code></pre>
+
+
+<p>
+Group by "Symbol" and find price- and volume totals per group:
+</p>
+
+<pre><code class="perl6">
+my %groups = group-by(@dsData, "Symbol");
+
+my %prices = %groups.map({ $_.key => $_.value.map(*<Close>).sum });
+my %volumes = %groups.map({ $_.key => $_.value.map(*<Volume>).sum });
+
+say %volumes.sort({ -$_.value }).head(5);
+</code></pre>
+
+<pre><code>
+# (USDT => 484154073229 BTC => 341816397627 ETH => 108895290490 USDC => 46281322959 XRP => 12113155817)
+</code></pre>
+
+
+<pre><code>
+say text-pareto-principle-plot(%prices.values.List, title => 'Prices');
+say text-pareto-principle-plot(%volumes.values.List, title => 'Volumes');
+</code></pre>
+
+
+<p>
+Here is the Pareto plot for closing prices:
+</p>
+
+<pre><code class="perl6">
+my @cumSumPrices = produce(&[+], %prices.values.sort.reverse);
+@cumSumPrices = @cumSumPrices X/ max(@cumSumPrices); 
+js-d3-list-plot(@cumSumPrices, plot-label => 'Pareto principle adherence for closing prices', width => 400, height => 300, format => 'html', div-id => 'pareto-prices');
+</code></pre>
+
+<!DOCTYPE html>
+<head>
+    <script src="https://d3js.org/d3.v7.js"></script>
+</head>
+<body>
+
+<div id="pareto-prices"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {"left":40,"bottom":40,"right":40,"top":40},
+    width = 400 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3
+   .select("#pareto-prices")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .style("background", "white")
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")")
+
+// Obtain title
+var title = "Pareto principle adherence for closing prices"
+
+if ( title.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        //.style("text-decoration", "underline")
+        .text(title);
+}
+
+// Obtain x-axis label
+var xAxisLabel = ""
+var xAxisLabelFontSize = 12
+
+if ( xAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", height + margin.bottom - xAxisLabelFontSize/2)
+        .attr("text-anchor", "middle")
+        .style("font-size", xAxisLabelFontSize.toString() + "px")
+        .text(xAxisLabel);
+}
+
+// Obtain y-axis label
+var yAxisLabel = ""
+var yAxisLabelFontSize = 12
+
+if ( yAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", - (height / 2))
+        .attr("y", 0 - margin.left + yAxisLabelFontSize)
+        .attr("text-anchor", "middle")
+        .style("font-size", yAxisLabelFontSize.toString() + "px")
+        .text(yAxisLabel);
+}
+
+// Obtain data
+var data = [{"y":0.9063789836207,"x":1},{"y":0.9700348103087,"x":2},{"x":3,"y":0.9825794035661},{"y":0.9893647744884,"x":4},{"y":0.9946186781259,"x":5},{"x":6,"y":0.998379525828},{"y":0.9992569590973,"x":7},{"x":8,"y":0.999535739679},{"y":0.999746471173,"x":9},{"y":0.9997933335594,"x":10},{"x":11,"y":0.9998361716632},{"y":0.9998785710504,"x":12},{"y":0.999917699984,"x":13},{"y":0.9999568239937,"x":14},{"y":0.9999726615211,"x":15},{"x":16,"y":0.999987977263},{"y":0.9999915586351,"x":17},{"x":18,"y":0.99999512106},{"y":0.9999976196224,"x":19},{"y":0.9999990414376,"x":20},{"y":1.0,"x":21}]
+
+var xMin = Math.min.apply(Math, data.map(function(o) { return o.x; }))
+var xMax = Math.max.apply(Math, data.map(function(o) { return o.x; }))
+
+var yMin = Math.min.apply(Math, data.map(function(o) { return o.y; }))
+var yMax = Math.max.apply(Math, data.map(function(o) { return o.y; }))
+
+// X scale and Axis
+var x = d3.scaleLinear()
+    .domain([xMin, xMax])
+    .range([0, width]);
+
+// Y scale and Axis
+var y = d3.scaleLinear()
+    .domain([yMin, yMax])
+    .range([height, 0]);
+
+svg
+  .append('g')
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+
+svg
+  .append('g')
+  .call(d3.axisLeft(y));
+
+// Add dots
+svg
+  .selectAll("whatever")
+  .data(data)
+  .enter()
+  .append("circle")
+    .attr("cx", function(d){ return x(d.x) })
+    .attr("cy", function(d){ return y(d.y) })
+    .attr("r", 3)
+    .attr("color", "blue")
+    .attr("fill", "steelblue")
+
+</script>
+</body>
+</html>
+
+
+
+<p>
+Here is the Pareto plot for trading volumes:
+</p>
+
+<pre><code class="perl6">
+my @cumSumVolumes = produce(&[+], %volumes.values.sort.reverse);
+@cumSumVolumes = @cumSumVolumes X/ max(@cumSumVolumes);
+js-d3-list-plot(@cumSumVolumes, plot-label => 'Pareto principle adherence for trading volumes', width => 400, height => 300, format => 'html', div-id => 'pareto-volumes');
+</code></pre>
+
+<!DOCTYPE html>
+<head>
+    <script src="https://d3js.org/d3.v7.js"></script>
+</head>
+<body>
+
+<div id="pareto-volumes"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {"top":40,"right":40,"left":40,"bottom":40},
+    width = 400 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3
+   .select("#pareto-volumes")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .style("background", "white")
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")")
+
+// Obtain title
+var title = "Pareto principle adherence for trading volumes"
+
+if ( title.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        //.style("text-decoration", "underline")
+        .text(title);
+}
+
+// Obtain x-axis label
+var xAxisLabel = ""
+var xAxisLabelFontSize = 12
+
+if ( xAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("x", (width / 2))
+        .attr("y", height + margin.bottom - xAxisLabelFontSize/2)
+        .attr("text-anchor", "middle")
+        .style("font-size", xAxisLabelFontSize.toString() + "px")
+        .text(xAxisLabel);
+}
+
+// Obtain y-axis label
+var yAxisLabel = ""
+var yAxisLabelFontSize = 12
+
+if ( yAxisLabel.length > 0 ) {
+    svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", - (height / 2))
+        .attr("y", 0 - margin.left + yAxisLabelFontSize)
+        .attr("text-anchor", "middle")
+        .style("font-size", yAxisLabelFontSize.toString() + "px")
+        .text(yAxisLabel);
+}
+
+// Obtain data
+var data = [{"y":0.45705236719411,"x":1},{"y":0.77973475761426,"x":2},{"x":3,"y":0.88253436841337},{"y":0.9262249813503,"x":4},{"y":0.93766007370308,"x":5},{"x":6,"y":0.94719343910833},{"x":7,"y":0.95617340078147},{"y":0.96472503154919,"x":8},{"y":0.9725902862132,"x":9},{"y":0.97766507963967,"x":10},{"y":0.982393870943,"x":11},{"y":0.98616582018748,"x":12},{"x":13,"y":0.9897335086956},{"x":14,"y":0.99248859724458},{"y":0.9949324198263,"x":15},{"y":0.9965779540075,"x":16},{"x":17,"y":0.99768335098021},{"y":0.99851216157388,"x":18},{"x":19,"y":0.99930659428048},{"x":20,"y":0.99981433983},{"x":21,"y":1.0}]
+
+var xMin = Math.min.apply(Math, data.map(function(o) { return o.x; }))
+var xMax = Math.max.apply(Math, data.map(function(o) { return o.x; }))
+
+var yMin = Math.min.apply(Math, data.map(function(o) { return o.y; }))
+var yMax = Math.max.apply(Math, data.map(function(o) { return o.y; }))
+
+// X scale and Axis
+var x = d3.scaleLinear()
+    .domain([xMin, xMax])
+    .range([0, width]);
+
+// Y scale and Axis
+var y = d3.scaleLinear()
+    .domain([yMin, yMax])
+    .range([height, 0]);
+
+svg
+  .append('g')
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+
+svg
+  .append('g')
+  .call(d3.axisLeft(y));
+
+// Add dots
+svg
+  .selectAll("whatever")
+  .data(data)
+  .enter()
+  .append("circle")
+    .attr("cx", function(d){ return x(d.x) })
+    .attr("cy", function(d){ return y(d.y) })
+    .attr("r", 3)
+    .attr("color", "blue")
+    .attr("fill", "steelblue")
+
+</script>
+</body>
+</html>
+
+
+
+<p><hr></p>
+
+<h2>
+References
+</h2>
+
+<h3>
+Articles
+</h3>
+
+<p>
+[AA1] Anton Antonov
+<a href="https://mathematicaforprediction.wordpress.com/2021/06/19/crypto-currencies-data-acquisition-with-visualization/">"Crypto-currencies data acquisition with visualization"</a> ,
+(2021),
+<a href="https://mathematicaforprediction.wordpress.com">MathematicaForPrediction at WordPress</a> .
+</p>
+
+<p>
+[AA2] Anton Antonov
+<a href="https://mathematicaforprediction.wordpress.com/2021/06/22/cryptocurrencies-data-explorations/">"Cryptocurrencies data explorations"</a> ,
+(2021),
+<a href="https://mathematicaforprediction.wordpress.com">MathematicaForPrediction at WordPress</a> .
+</p>
+
+
+<h3>
+Functions, packages
+</h3>
+
+<p>
+[AAf1] Anton Antonov,
+<a href="https://www.wolframcloud.com/obj/antononcube/DeployedResources/Function/CryptocurrencyData/">CryptocurrencyData</a> Mathematica resource function,
+(2021).
+<a href="https://www.wolframcloud.com/obj/antononcube">WolframCloud/antononcube</a> .
+</p>
+
+<p>
+[AAp1] Anton Antonov,
+<a href="https://github.com/antononcube/Raku-Data-Cryptocurrencies">Data::Cryptocurrencies Raku package</a> ,
+(2023).
+<a href="https://github.com/antononcube">GitHub/antononcube</a> .
+</p>
+
+<p>
+[AAp2] Anton Antonov,
+<a href="https://github.com/antononcube/Raku-JavaScript-D3">JavaScript::D3 Raku package</a> ,
+(2022).
+<a href="https://github.com/antononcube">GitHub/antononcube</a> .
+</p>
+
+<p>
+[AAp3] Anton Antonov,
+<a href="https://github.com/antononcube/Raku-Text-CodeProcessing">Text::CodeProcessing Raku package</a> ,
+(2021).
+<a href="https://github.com/antononcube">GitHub/antononcube</a> .
+</p>
+
+<p>
+[AAp4] Anton Antonov,
+<a href="https://github.com/antononcube/Raku-Markdown-Grammar">Markdown::Grammar</a> ,
+(2022).
+<a href="https://github.com/antononcube">GitHub/antononcube</a> .
+</p>
