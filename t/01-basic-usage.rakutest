@@ -6,7 +6,7 @@ use lib './lib';
 use Data::Cryptocurrencies;
 use Test;
 
-plan 5;
+plan 6;
 
 ## 1
 ok cryptocurrency-data('BTC', props => 'all', format => 'dataset'):!cache-all;
@@ -18,9 +18,12 @@ ok cryptocurrency-data('BTC', props => 'all', dates => (DateTime.new(2020,1,1,0,
 ok cryptocurrency-data('BTC', props => <DataTime Close>, format => 'hash');
 
 ## 4
-isa-ok cryptocurrency-data(<BTC ETH>), Hash, 'Get data for a list of cryptocurrency symbols';
+isa-ok cryptocurrency-data(<BTC ETH>, format => 'hash'), Hash, 'Get data for a list of cryptocurrency symbols';
 
 ## 5
+isa-ok cryptocurrency-data(<BTC ETH USDT>, props => 'all', dates => (DateTime.new(2020,1,1,0,0,0), now), format => 'dataset'), List, 'dataset for three symbols';
+
+## 6
 dies-ok { cryptocurrency-data('Blah**D&*') };
 
 done-testing;

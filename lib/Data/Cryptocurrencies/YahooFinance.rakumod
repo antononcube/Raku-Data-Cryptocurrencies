@@ -30,11 +30,11 @@ my @currencies = ["all", "AED", "ARS", "AUD", "BRL", "CAD", "CHF",
                   "SAR", "SEK", "SGD", "THB", "TRY", "UAH", "USD", "VEF", "XAU",
                   "ZAR"];
 
-our sub YahooFinanceKnownCryptoCurrencies() {
+our sub KnownCryptoCurrencies() {
     return @cryptoCurrencies;
 }
 
-our sub YahooFinanceKnownCurrencies() {
+our sub KnownCurrencies() {
     return @currencies;
 }
 
@@ -65,8 +65,7 @@ our sub XDGDataFileName(Date $date) {
 
 our sub DumpCachedData(Date $date) {
     my $fname = XDGDataFileName($date);
-    my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant.Int; $_ }).Array });
-    note %dumpData.first.head(2);
+    my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant; $_ }).Array });
     spurt $fname, to-json(%dumpData);
 }
 
@@ -106,14 +105,24 @@ sub is-dates-vector($x) {
 our proto CryptocurrencyData(|) is export {*}
 
 multi sub CryptocurrencyData(@ccSymbols, *%args) {
-    return @ccSymbols.map({ $_ => CryptocurrencyData($_, |%args) }).Hash;
+    my %res = @ccSymbols.map({ $_ => CryptocurrencyData($_, |%args) });
+    my $format = %args<format> // 'dataset';
+    given $format {
+        when 'dataset' {
+            my @ds;
+            for %res.kv -> $k, @v { @ds.append(@v); }
+            return @ds;
+        }
+        when 'hash' { return %res; }
+        default { return %res; }
+    }
 }
 
 multi sub CryptocurrencyData(Str $ccSymbol,
                              :dates(:$date-spec) is copy = Whatever,
                              :props(:$properties) is copy = Whatever,
                              :$currency = 'USD',
-                             :$format = 'hash',
+                             :$format = 'dataset',
                              Bool :$cache-all = False,
                              Bool :$keep = True
                              ) {
@@ -126,7 +135,7 @@ multi sub CryptocurrencyData(Str $ccSymbol,
             do given $properties {
                 when Whatever { <DateTime Close> }
                 when $_ ~~ Positional && $_.all ~~ Str { unique(['DateTime', |$_]) }
-                when $_ ~~ Str && $_ eq 'all' { [] }
+                when 'all' { [] }
                 when $_ ~~ Str { ['DateTime', $_] }
                 default { [] }
             };
@@ -199,18 +208,18 @@ multi sub CryptocurrencyData(Str $ccSymbol,
     # Result
     return do given $format {
 
-        when $_.isa(Whatever) || $_ ~~ Str && $_.lc ∈ <hash timeseries> {
+        when $_.isa(Whatever) || $_ ~~ Str && $_.lc ∈ <timeseries> {
 
             my $tsVal = (@props (-) <Date DateTime>).keys.head;
             my %h = @dsRes.map({ $_<DateTime> => $_{$tsVal} }).Hash;
 
-            $_.lc eq 'hash' ?? %h !! %h.pairs.sort({ $_.key }).Array;
+            %h.pairs.sort({ $_.key }).Array;
         }
 
-        when $_ ~~ Str && $_.lc ∈ <dataset dataframe> { @dsRes }
+        when $_ ~~ Str && $_.lc ∈ <dataset dataframe hash> { @dsRes }
 
         default {
-            warn "The argument \$format is expected to be 'hash', 'timeseroes', 'dataset', or Whatever.";
+            note "The argument \$format is expected to be 'hash', 'timeseries', 'dataset', or Whatever.";
             @dsRes
         }
     }
