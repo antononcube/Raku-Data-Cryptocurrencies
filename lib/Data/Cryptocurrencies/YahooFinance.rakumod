@@ -178,13 +178,13 @@ multi sub CryptocurrencyData(Str $ccSymbol,
                     $id => @ds;
                 };
 
+        # Add to data storage
+        %allData = merge-hash(%allData, %cryptoCurrenciesData);
+
         # Dump downloaded data
         if $cache-all && $keep {
             DumpCachedData(now.DateTime.Date);
         }
-
-        # Add to data storage
-        %allData = merge-hash(%allData, %cryptoCurrenciesData);
 
         # Retrieve
         @dsRes = |%allData{make-id($ccSymbol, $currency)}
