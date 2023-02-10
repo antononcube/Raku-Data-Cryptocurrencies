@@ -5,6 +5,8 @@ use Data::Cryptocurrencies;
 use JSON::Fast;
 use DateTime::Grammar;
 
+my %*SUB-MAIN-OPTS = :named-anywhere;
+
 #| Retrieves cryptocurrency data.
 sub MAIN(
         Str $symbol = 'BTC',          #= Cryptocurrency symbol.
