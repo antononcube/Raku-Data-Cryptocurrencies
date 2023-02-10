@@ -44,7 +44,7 @@ use JavaScript::D3;
 Here we get Bitcoin (BTC) data from 1/1/2020 until now:
 
 ```perl6
-my %ccTS = cryptocurrency-data(<BTC ETH>, dates => (DateTime.new(2020,1,1,0,0,0), now), props => <DateTime Close>, format => 'hash');
+my %ccTS = cryptocurrency-data(<BTC ETH>, dates => (DateTime.new(2020,1,1,0,0,0), now), props => <DateTime Close>, format => 'hash'):cache-all;
 
 say %ccTS.elems;
 ```
@@ -114,7 +114,10 @@ Here is the Pareto plot for closing prices:
 ```perl6, results=asis
 my @cumSumPrices = produce(&[+], %prices.values.sort.reverse);
 @cumSumPrices = @cumSumPrices X/ max(@cumSumPrices); 
-js-d3-list-plot(@cumSumPrices, plot-label => 'Pareto principle adherence for closing prices', width => 400, height => 300, format => 'html', div-id => 'pareto-prices');
+js-d3-list-plot(@cumSumPrices, 
+                plot-label => 'Pareto principle adherence for closing prices', 
+                width => 400, height => 300, 
+                format => 'html', div-id => 'pareto-prices'):grid-lines;
 ```
 
 Here is the Pareto plot for trading volumes:
@@ -122,7 +125,10 @@ Here is the Pareto plot for trading volumes:
 ```perl6, results=asis
 my @cumSumVolumes = produce(&[+], %volumes.values.sort.reverse);
 @cumSumVolumes = @cumSumVolumes X/ max(@cumSumVolumes);
-js-d3-list-plot(@cumSumVolumes, plot-label => 'Pareto principle adherence for trading volumes', width => 400, height => 300, format => 'html', div-id => 'pareto-volumes');
+js-d3-list-plot(@cumSumVolumes, 
+                plot-label => 'Pareto principle adherence for trading volumes',
+                width => 400, height => 300, 
+                format => 'html', div-id => 'pareto-volumes'):grid-lines;
 ```
 
 -------
