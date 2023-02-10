@@ -18,13 +18,13 @@ sub MAIN(
          ) {
 
     my $endDateSpec = do given $end-date.lc {
-        when $_ ∈ <now today> { now.Int }
-        when $_ ∈ <auto whatever> { now.Int }
+        when $_ ∈ <now today> { Date.today.DateTime }
+        when $_ ∈ <auto whatever> { Date.today.DateTime }
         default { datetime-interpret($_) }
     }
 
     my $startDateSpec = do given $start-date.lc {
-        when $_ ∈ <now today> { Date.today.Int }
+        when $_ ∈ <now today> { Date.today.DateTime }
         when $_ ∈ <auto whatever> { $endDateSpec - 24 * 3600 }
         default { datetime-interpret($_) }
     };
