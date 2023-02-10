@@ -1,7 +1,7 @@
 # Data::Cryptocurrencies Raku package
 
 This Raku package has functions for cryptocurrency data retrieval.
-(At this point, only Yahoo Finance is used as a data source.)
+(At this point, only [Yahoo Finance](https://finance.yahoo.com/crypto/) is used as a data source.)
 
 The implementation follows the Mathematica implementation in [AAf1] described in [AA1].
 (Further explorations are discussed in [AA2].)

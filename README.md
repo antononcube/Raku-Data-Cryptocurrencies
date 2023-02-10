@@ -1,7 +1,7 @@
 # Data::Cryptocurrencies Raku package
 
 This Raku package has functions for cryptocurrency data retrieval.
-(At this point, only Yahoo Finance is used as a data source.)
+(At this point, only [Yahoo Finance](https://finance.yahoo.com/crypto/) is used as a data source.)
 
 The implementation follows the Mathematica implementation in [AAf1] described in [AA1].
 (Further explorations are discussed in [AA2].)
@@ -67,13 +67,13 @@ records-summary(@ts, field-names => <DateTime Close>);
 # +--------------------------------+----------------------+
 # | DateTime                       | Close                |
 # +--------------------------------+----------------------+
-# | Min    => 2020-01-01T00:00:37Z | 8755.246094  => 1    |
-# | 1st-Qu => 2020-10-10T12:00:37Z | 45585.03125  => 1    |
-# | Mean   => 2021-07-22T00:00:37Z | 55888.132813 => 1    |
-# | Median => 2021-07-22T00:00:37Z | 29098.910156 => 1    |
-# | 3rd-Qu => 2022-05-02T12:00:37Z | 20471.482422 => 1    |
-# | Max    => 2023-02-10T00:00:37Z | 21395.019531 => 1    |
-# |                                | 53555.109375 => 1    |
+# | Min    => 2020-01-01T00:00:37Z | 7334.098633  => 1    |
+# | 1st-Qu => 2020-10-10T12:00:37Z | 49631.242188 => 1    |
+# | Mean   => 2021-07-22T00:00:37Z | 6859.083008  => 1    |
+# | Median => 2021-07-22T00:00:37Z | 9525.363281  => 1    |
+# | 3rd-Qu => 2022-05-02T12:00:37Z | 47504.851563 => 1    |
+# | Max    => 2023-02-10T00:00:37Z | 11675.739258 => 1    |
+# |                                | 22572.839844 => 1    |
 # |                                | (Other)      => 1130 |
 # +--------------------------------+----------------------+
 ```
