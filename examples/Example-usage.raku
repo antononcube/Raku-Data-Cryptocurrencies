@@ -1,9 +1,6 @@
 #!/usr/bin/env raku
 use v6.d;
 
-use lib '.';
-use lib './lib';
-
 use Data::Cryptocurrencies;
 use Data::Reshapers;
 use Data::Summarizers;
@@ -26,15 +23,19 @@ records-summary(@dsRes);
 
 $tstart = now;
 
-my %ts = cryptocurrency-data('BTC', props => <DateTime Close>, dates => (DateTime.new(2020, 1, 1, 0, 0, 0), now),
-        format => 'hash');
+my @dsTS = cryptocurrency-data('BTC', props => <DateTime Close>, dates => (DateTime.new(2020, 1, 1, 0, 0, 0), now), format => 'dataset');
 
 $tend = now;
 say "Second time ingestion time: { $tend - $tstart }";
 
-say %ts.elems;
-say %ts.tail(12).raku;
+# Clean data
+@dsTS = @dsTS.grep({ $_<Close> ~~ Numeric });
 
-records-summary(%ts.pairs.map({ %(Key => $_.key, Value => $_.value) }), field-names => <Key Value>);
+# Summary
+records-summary(@dsTS, field-names => <DateTime Close>);
 
-say text-list-plot(%ts.keys>>.DateTime>>.Numeric, %ts.values.Array, width => 160, height => 20);
+# Deduce type
+say deduce-type(@dsTS);
+
+# Plot
+say text-list-plot(@dsTS.map({ $_<DateTime>.Numeric }).List, @dsTS.map(*<Close>).List, width => 120, height => 20);
