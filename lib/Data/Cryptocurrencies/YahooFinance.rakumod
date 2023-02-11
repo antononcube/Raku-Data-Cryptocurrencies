@@ -69,8 +69,7 @@ our sub DumpCachedData(Date $date) {
     # With JSON we have greater portability, but the JSON converter converts the DateTime objects
     # into "simple" strings. (E.g. "2017-11-09T00:00:00Z".) Hence it is harder, time consuming,
     # to reconstruct DateTime objects from a dump.
-    # One problem with the Raku format is that EVAL / EVALFILE are very slow with data in retrieved
-    # (with this package.)
+    # One problem with the Raku format is that EVAL / EVALFILE are very slow with data retrieved with this package.
     my %newData = %allData.map({ $_.key => $_.value.map({ $_.grep({ $_.key ne 'DateTime' }).Hash }).Array });
     spurt $fname, to-json(%newData);
 }
