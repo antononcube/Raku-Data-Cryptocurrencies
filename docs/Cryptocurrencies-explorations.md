@@ -82,7 +82,7 @@ js-d3-date-list-plot(%ts4<ETH>, plot-label => 'ETH', width => 800, height => 400
 Get data for all cryptocurrencies:
 
 ```perl6
-my @dsData = cryptocurrency-data('all', dates => (now - 14 * 24 * 3600, now), props => ['Symbol', 'DateTime', 'Close', 'Volume'], format => 'dataset');
+my @dsData = cryptocurrency-data('all', dates => (now - 14 * 24 * 3600, now), props => <Symbol DateTime Close Volume>, format => 'dataset');
 say "Dimensions : {dimensions(@dsData)}.";
 ```
 
@@ -112,9 +112,7 @@ say text-pareto-principle-plot(%volumes.values.List, title => 'Volumes');
 Here is the Pareto plot for closing prices:
 
 ```perl6, results=asis
-my @cumSumPrices = produce(&[+], %prices.values.sort.reverse);
-@cumSumPrices = @cumSumPrices X/ max(@cumSumPrices); 
-js-d3-list-plot(@cumSumPrices, 
+js-d3-list-plot(pareto-principle-statistic(%prices)>>.value, 
                 plot-label => 'Pareto principle adherence for closing prices', 
                 width => 400, height => 300, 
                 format => 'html', div-id => 'pareto-prices'):grid-lines;
@@ -123,9 +121,7 @@ js-d3-list-plot(@cumSumPrices,
 Here is the Pareto plot for trading volumes:
 
 ```perl6, results=asis
-my @cumSumVolumes = produce(&[+], %volumes.values.sort.reverse);
-@cumSumVolumes = @cumSumVolumes X/ max(@cumSumVolumes);
-js-d3-list-plot(@cumSumVolumes, 
+js-d3-list-plot(pareto-principle-statistic(%volumes)>>.value, 
                 plot-label => 'Pareto principle adherence for trading volumes',
                 width => 400, height => 300, 
                 format => 'html', div-id => 'pareto-volumes'):grid-lines;
