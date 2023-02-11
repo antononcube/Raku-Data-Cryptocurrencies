@@ -14,7 +14,7 @@ sub MAIN(
         Str :$start-date = 'auto',    #= Start date.
         Str :$end-date = 'now',       #= End date.
         Str :c(:$currency) = 'USD',   #= Currency.
-        Str :$format = 'json',        #= Format of the result
+        Str :f(:$format) = 'json',    #= Format of the result
          ) {
 
     my $endDateSpec = do given $end-date.lc {
@@ -33,9 +33,9 @@ sub MAIN(
 
     my @ds = cryptocurrency-data($symbol, props => $properties, dates => @dateSpec, :$currency, format => 'dataset');
 
-    if $format.lc eq 'json' {
-        say to-json(@ds);
-    } else {
-        say @ds;
+    say do given $format.lc {
+        when 'json' { to-json(@ds) }
+        when 'raku' { @ds.raku }
+        default { @ds }
     }
 }
