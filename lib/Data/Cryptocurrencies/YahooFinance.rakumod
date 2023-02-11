@@ -123,8 +123,7 @@ multi sub CryptocurrencyData(Str $ccSymbol,
                              :props(:$properties) is copy = Whatever,
                              :$currency = 'USD',
                              :$format = 'dataset',
-                             Bool :$cache-all = False,
-                             Bool :$keep = True
+                             Bool :$cache-all = False
                              ) {
     # Process ccSymbol
     die "The first argument is expected to be one of { @cryptoCurrencies.join(', ') }."
@@ -191,7 +190,7 @@ multi sub CryptocurrencyData(Str $ccSymbol,
         %allData = merge-hash(%allData, %cryptoCurrenciesData);
 
         # Dump downloaded data
-        if $cache-all && $keep {
+        if $cache-all {
             DumpCachedData(now.DateTime.Date);
         }
 
