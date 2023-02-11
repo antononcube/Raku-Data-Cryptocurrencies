@@ -59,23 +59,29 @@ our sub XDGDataDirectoryName() {
     return $dirName;
 }
 
-our sub XDGDataFileName(Date $date) {
-    return XDGDataDirectoryName() ~ '/' ~ 'YahooFinance-' ~ $date.Str ~ '.json';
+our sub XDGDataFileName(Date $date, Str $type = 'raku') {
+    return XDGDataDirectoryName() ~ '/' ~ 'YahooFinance-' ~ $date.Str ~ '.' ~ $type;
 }
 
 our sub DumpCachedData(Date $date) {
-    my $fname = XDGDataFileName($date);
-    my %dumpData = %allData.map({ $_.key => $_.value.map({ $_<DateTime> = $_<DateTime>.Instant; $_ }).Array });
-    spurt $fname, to-json(%dumpData);
+    my $fname = XDGDataFileName($date, 'raku');
+    # I am not sure is it better to use JSON or Raku format.
+    # With JSON we have greater portability, but the JSON converter converts the DateTime objects
+    # into "simple" strings. (E.g. "2017-11-09T00:00:00Z".) Hence it is harder, time consuming,
+    # to reconstruct DateTime objects from a dump.
+    # spurt $fname, to-json(%allData);
+    spurt $fname, %allData.raku;
 }
 
 our sub GetCachedData(Date $date -->Bool) {
 
-    my $fname = XDGDataFileName($date);
+    my $fname = XDGDataFileName($date, 'raku');
     if $fname.IO.e {
         my $content = slurp $fname;
         my %newData = from-json($content);
-        %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = DateTime.new($_<DateTime>); $_ }).Array });
+        # See the comment in DumpCachedData.
+        # %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = DateTime.new($_<DateTime>); $_ }).Array });
+        %newData = EVALFILE $fname;
         %allData = merge-hash(%allData, %newData);
         return True;
     }
