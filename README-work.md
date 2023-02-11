@@ -39,6 +39,7 @@ my @ts = cryptocurrency-data('BTC', dates => (DateTime.new(2020, 1, 1, 0, 0, 0),
 say @ts.elems;
 ```
 
+When we request the data to be returned as “dataset” then the result is an array of hashes.
 When we request the data to be returned as "timeseries" the result is an array of pairs (sorted by date.)
 Here are BTC values for the last week (at the point of retrieval):
 
@@ -58,6 +59,8 @@ Clean data:
 @ts = @ts.grep({ $_<Close> ~~ Numeric }).Array;
 say @ts.elems;
 ```
+
+Here is a text-based plot of the corresponding time series:
 
 ```perl6
 say text-list-plot(@ts.map(*<DateTime>.Instant.Int).List, @ts.map(*<Close>).List, width => 100, height => 20);

@@ -39,9 +39,10 @@ my @ts = cryptocurrency-data('BTC', dates => (DateTime.new(2020, 1, 1, 0, 0, 0),
 say @ts.elems;
 ```
 ```
-# 1137
+# 1138
 ```
 
+When we request the data to be returned as “dataset” then the result is an array of hashes.
 When we request the data to be returned as "timeseries" the result is an array of pairs (sorted by date.)
 Here are BTC values for the last week (at the point of retrieval):
 
@@ -49,13 +50,13 @@ Here are BTC values for the last week (at the point of retrieval):
 .say for @ts.tail(7)
 ```
 ```
-# {Close => 23331.847656, DateTime => 2023-02-04T00:00:00Z}
 # {Close => 22955.666016, DateTime => 2023-02-05T00:00:00Z}
 # {Close => 22760.109375, DateTime => 2023-02-06T00:00:00Z}
 # {Close => 23264.291016, DateTime => 2023-02-07T00:00:00Z}
 # {Close => 22939.398438, DateTime => 2023-02-08T00:00:00Z}
-# {Close => null, DateTime => 2023-02-09T00:00:00Z}
-# {Close => 21863.925781, DateTime => 2023-02-10T00:00:00Z}
+# {Close => 21819.039063, DateTime => 2023-02-09T00:00:00Z}
+# {Close => 21651.183594, DateTime => 2023-02-10T00:00:00Z}
+# {Close => 21737.310547, DateTime => 2023-02-11T00:00:00Z}
 ```
 
 Here is a summary:
@@ -64,18 +65,16 @@ Here is a summary:
 records-summary(@ts, field-names => <DateTime Close>);
 ```
 ```
-# +--------------------------------+----------------------+
-# | DateTime                       | Close                |
-# +--------------------------------+----------------------+
-# | Min    => 2020-01-01T00:00:37Z | 7334.098633  => 1    |
-# | 1st-Qu => 2020-10-10T12:00:37Z | 49631.242188 => 1    |
-# | Mean   => 2021-07-22T00:00:37Z | 6859.083008  => 1    |
-# | Median => 2021-07-22T00:00:37Z | 9525.363281  => 1    |
-# | 3rd-Qu => 2022-05-02T12:00:37Z | 47504.851563 => 1    |
-# | Max    => 2023-02-10T00:00:37Z | 11675.739258 => 1    |
-# |                                | 22572.839844 => 1    |
-# |                                | (Other)      => 1130 |
-# +--------------------------------+----------------------+
+# +--------------------------------+----------------------------+
+# | DateTime                       | Close                      |
+# +--------------------------------+----------------------------+
+# | Min    => 2020-01-01T00:00:37Z | Min    => 4970.788086      |
+# | 1st-Qu => 2020-10-11T00:00:37Z | 1st-Qu => 11779.773438     |
+# | Mean   => 2021-07-22T12:00:37Z | Mean   => 28606.4418860167 |
+# | Median => 2021-07-22T12:00:37Z | Median => 23127.9101565    |
+# | 3rd-Qu => 2022-05-03T00:00:37Z | 3rd-Qu => 42412.433594     |
+# | Max    => 2023-02-11T00:00:37Z | Max    => 67566.828125     |
+# +--------------------------------+----------------------------+
 ```
 
 Clean data:
@@ -85,8 +84,10 @@ Clean data:
 say @ts.elems;
 ```
 ```
-# 1136
+# 1138
 ```
+
+Here is a text-based plot of the corresponding time series:
 
 ```perl6
 say text-list-plot(@ts.map(*<DateTime>.Instant.Int).List, @ts.map(*<Close>).List, width => 100, height => 20);
@@ -99,13 +100,13 @@ say text-list-plot(@ts.map(*<DateTime>.Instant.Int).List, @ts.map(*<Close>).List
 # +                                     *******           *****                                      +  60000.00
 # |                                     *******        * **  **                                      |          
 # +                                    **** ***       ** *    ***                                    +  50000.00
-# |                                    **     *      *****    ***  *   *                             |          
-# |                                 *         **    **  **      ** *******                           |          
+# |                                    **     *      *****    ***  *  **                             |          
+# |                                 *         *     **  **      ** *******                           |          
 # +                                 ****      ****  *             ***** ***                          +  40000.00
 # |                                 ***        ******             *       *                          |          
 # +                                 ***          * *                      ***                        +  30000.00
-# |                                **                                        *   *                   |          
-# |                                *                                         ********* **    ***     |          
+# |                                *                                         *   *                   |          
+# |                               **                                         ********* **    ***     |          
 # +                             ***                                          ***  ************       +  20000.00
 # |                      *    ***                                                       **           |          
 # +     ******   **************                                                                      +  10000.00
