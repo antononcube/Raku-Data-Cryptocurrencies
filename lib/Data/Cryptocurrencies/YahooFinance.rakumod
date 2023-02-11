@@ -3,8 +3,8 @@ use v6.d;
 use Data::ExampleDatasets;
 use Data::Reshapers;
 use DateTime::Grammar;
-use JSON::Fast;
 use Hash::Merge;
+use JSON::Fast;
 use LWP::Simple;
 use XDG::BaseDirectory :terms;
 
@@ -59,29 +59,31 @@ our sub XDGDataDirectoryName() {
     return $dirName;
 }
 
-our sub XDGDataFileName(Date $date, Str $type = 'raku') {
+our sub XDGDataFileName(Date $date, Str $type = 'json') {
     return XDGDataDirectoryName() ~ '/' ~ 'YahooFinance-' ~ $date.Str ~ '.' ~ $type;
 }
 
 our sub DumpCachedData(Date $date) {
-    my $fname = XDGDataFileName($date, 'raku');
+    my $fname = XDGDataFileName($date, 'json');
     # I am not sure is it better to use JSON or Raku format.
     # With JSON we have greater portability, but the JSON converter converts the DateTime objects
     # into "simple" strings. (E.g. "2017-11-09T00:00:00Z".) Hence it is harder, time consuming,
     # to reconstruct DateTime objects from a dump.
-    # spurt $fname, to-json(%allData);
-    spurt $fname, %allData.raku;
+    # One problem with the Raku format is that EVAL / EVALFILE are very slow with data in retrieved
+    # (with this package.)
+    my %newData = %allData.map({ $_.key => $_.value.map({ $_.grep({ $_.key ne 'DateTime' }).Hash }).Array });
+    spurt $fname, to-json(%newData);
 }
 
 our sub GetCachedData(Date $date -->Bool) {
 
-    my $fname = XDGDataFileName($date, 'raku');
+    my $fname = XDGDataFileName($date, 'json');
     if $fname.IO.e {
-        my $content = slurp $fname;
-        my %newData = from-json($content);
         # See the comment in DumpCachedData.
-        # %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = DateTime.new($_<DateTime>); $_ }).Array });
-        %newData = EVALFILE $fname;
+        my $content = slurp($fname);
+        my %newData = from-json($content);
+        %newData = %newData.map({ $_.key => $_.value.map({ $_<DateTime> = datetime-interpret($_<Date>); $_ }).Array });
+
         %allData = merge-hash(%allData, %newData);
         return True;
     }
@@ -161,7 +163,7 @@ multi sub CryptocurrencyData(Str $ccSymbol,
     unless $currency ∈ @currencies;
 
     # Pre-load cached data
-    if AllCachedData().elems == 0 && XDGDataFileName(now.DateTime.Date).IO.e {
+    if AllCachedData().elems == 0 && XDGDataFileName(now.DateTime.Date, 'json').IO.e {
         my $dumpGetRes = GetCachedData(now.DateTime.Date);
     }
 
