@@ -14,6 +14,7 @@
     "JSON::Fast:ver<0.17>+",
     "Hash::Merge:ver<2.0.0+>:api<2+>",
     "LWP::Simple:ver<0.109+>",
+    "File::Temp:ver<0.0.10+>",
     "XDG::BaseDirectory:ver<0.0.13+>:auth<zef:jonathanstowe>:api<1.0+>"
   ],
   "build-depends": [],
