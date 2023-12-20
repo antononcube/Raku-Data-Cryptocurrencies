@@ -4,6 +4,7 @@ use v6.d;
 use Data::Cryptocurrencies;
 use Data::Reshapers;
 use Data::Summarizers;
+use Data::TypeSystem;
 use Text::Plot;
 
 my $tstart = now;

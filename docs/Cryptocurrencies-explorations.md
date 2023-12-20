@@ -33,6 +33,7 @@ Here we load the packages used below:
 use Data::Cryptocurrencies;
 use Data::Reshapers;
 use Data::Summarizers;
+use Data::TypeSystem;
 use Text::Plot;
 use JavaScript::D3;
 ```
